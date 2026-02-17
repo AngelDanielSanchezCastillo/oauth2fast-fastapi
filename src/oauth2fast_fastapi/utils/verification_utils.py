@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 from jose import JWTError, jwt
 
-from app.core.settings import settings
+from ..settings import settings
 
 
 def create_verification_token(email: str) -> str:

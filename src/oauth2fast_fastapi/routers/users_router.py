@@ -21,10 +21,7 @@ from ..utils.verification_utils import (
     verify_verification_token,
 )
 
-router = APIRouter(
-    prefix=settings.auth_url_prefix.get_secret_value(),
-    tags=[settings.auth_url_prefix.get_secret_value()[1:].capitalize()],
-)
+router = APIRouter()
 
 
 @router.post("/users/", response_model=UserRead)

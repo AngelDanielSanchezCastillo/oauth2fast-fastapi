@@ -29,8 +29,6 @@ class MailSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    project_name: str = "OAuth2Fast"
-    frontend_url: str = "https://example.com/"
     auth_url_prefix: SecretStr = SecretStr("auth")
 
     # JWT Configuration

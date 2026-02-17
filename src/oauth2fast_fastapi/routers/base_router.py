@@ -9,11 +9,20 @@ from ..schemas.token_schema import Token
 from ..settings import settings
 from ..utils.password_utils import verify_password
 from ..utils.token_utils import create_access_token
+from .users_router import router as users_router
+
+# Ensure prefix starts with "/"
+prefix = settings.auth_url_prefix.get_secret_value()
+if not prefix.startswith("/"):
+    prefix = f"/{prefix}"
 
 router = APIRouter(
-    prefix=settings.auth_url_prefix.get_secret_value(),
-    tags=[settings.auth_url_prefix.get_secret_value()[1:].capitalize()],
+    prefix=prefix,
+    tags=[prefix.strip("/").capitalize()],
 )
+
+# Include users router
+router.include_router(users_router)
 
 
 @router.post("/token", response_model=Token)
