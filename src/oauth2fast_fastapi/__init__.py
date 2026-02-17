@@ -7,6 +7,7 @@ from .database import engine
 from .dependencies import get_auth_session, get_current_user, get_current_verified_user
 from .models.user_model import User
 from .routers.base_router import router
+from .schemas.user_schema import UserCreate, UserRead
 from .settings import settings
 
 __all__ = [
@@ -16,6 +17,8 @@ __all__ = [
     "get_current_user",
     "get_current_verified_user",
     "User",
+    "UserCreate",
+    "UserRead",
     "router",
     "settings",
 ]
