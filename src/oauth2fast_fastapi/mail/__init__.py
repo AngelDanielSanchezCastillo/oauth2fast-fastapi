@@ -1,0 +1,1 @@
+from .service import send_verification_email as send_verification_email
