@@ -1,1 +1,1 @@
-from .bases import BaseModel as BaseModel
+from .bases import AuthModel as AuthModel

@@ -1,9 +1,11 @@
+from functools import partial
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from pgsqlasync2fast_fastapi import get_db_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .database import async_session
 from .models.user_model import User
 from .schemas.token_schema import TokenData
 from .settings import settings
@@ -11,9 +13,8 @@ from .utils.token_utils import verify_token
 
 
 # Dependency de Database para usar en endpoints
-async def get_auth_session():
-    async with async_session() as session:
-        yield session
+# Uses the "auth" connection from pgsqlasync2fast-fastapi
+get_auth_session = partial(get_db_session, connection_name="auth")
 
 
 # Dependency de Auth Base

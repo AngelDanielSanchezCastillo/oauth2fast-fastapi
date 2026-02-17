@@ -1,12 +1,22 @@
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+"""
+Database module for OAuth2Fast-FastAPI.
 
-from .settings import settings
+This module uses pgsqlasync2fast-fastapi for database connectivity.
+The database connection is configured via environment variables with the prefix DB_CONNECTIONS__AUTH__
+"""
 
-DB_URL = f"postgresql+asyncpg://{settings.auth_db.username}:{settings.auth_db.password.get_secret_value()}@{settings.auth_db.hostname}:{settings.auth_db.port}/{settings.auth_db.name}"
-engine = create_async_engine(DB_URL, echo=False)
-
-
-# Sesion asíncrona
-async_session = async_sessionmaker(
-    bind=engine, class_=AsyncSession, expire_on_commit=False
+# Re-export from pgsqlasync2fast-fastapi for backward compatibility
+from pgsqlasync2fast_fastapi import (
+    get_db_engine,
+    get_db_session,
+    shutdown_database,
+    startup_database,
 )
+
+__all__ = [
+    "get_db_session",
+    "get_db_engine",
+    "startup_database",
+    "shutdown_database",
+]
+

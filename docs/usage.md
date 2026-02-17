@@ -18,34 +18,44 @@ SECRET_KEY=your-super-secret-key-change-this
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-# Database Configuration
-AUTH_DB__USERNAME=postgres
-AUTH_DB__PASSWORD=yourpassword
-AUTH_DB__HOSTNAME=localhost
-AUTH_DB__NAME=myapp_db
-AUTH_DB__PORT=5432
-
-# Mail Server Configuration
-AUTH_MAIL_SERVER__USERNAME=noreply@yourapp.com
-AUTH_MAIL_SERVER__PASSWORD=your-smtp-password
-AUTH_MAIL_SERVER__SERVER=smtp.gmail.com
-AUTH_MAIL_SERVER__PORT=587
-AUTH_MAIL_SERVER__FROM_DIRECTION=noreply@yourapp.com
-AUTH_MAIL_SERVER__FROM_NAME=Your App
-AUTH_MAIL_SERVER__STARTTLS=true
-AUTH_MAIL_SERVER__SSL_TLS=false
-
 # Application Settings
 PROJECT_NAME=My App
 FRONTEND_URL=https://yourapp.com
 AUTH_URL_PREFIX=auth
+
+# Database Configuration (using pgsqlasync2fast-fastapi)
+# Connection name: "auth" (set as default)
+DB_DEFAULT_CONNECTION=auth
+DB_CONNECTIONS__AUTH__USERNAME=postgres
+DB_CONNECTIONS__AUTH__PASSWORD=yourpassword
+DB_CONNECTIONS__AUTH__HOST=localhost
+DB_CONNECTIONS__AUTH__DATABASE=myapp_db
+DB_CONNECTIONS__AUTH__PORT=5432
+
+# Mail Server Configuration (using mailing2fast-fastapi)
+# SMTP Account name: "auth" (set as default)
+MAIL_DEFAULT_ACCOUNT=auth
+MAIL_SMTP_ACCOUNTS__AUTH__HOST=smtp.gmail.com
+MAIL_SMTP_ACCOUNTS__AUTH__PORT=587
+MAIL_SMTP_ACCOUNTS__AUTH__USERNAME=noreply@yourapp.com
+MAIL_SMTP_ACCOUNTS__AUTH__PASSWORD=your-smtp-password
+MAIL_SMTP_ACCOUNTS__AUTH__FROM_EMAIL=noreply@yourapp.com
+MAIL_SMTP_ACCOUNTS__AUTH__FROM_NAME=Your App
+MAIL_SMTP_ACCOUNTS__AUTH__SECURITY=starttls
 ```
 
 ### 2. Basic FastAPI Integration
 
 ```python
 from fastapi import FastAPI, Depends
-from oauth2fast_fastapi import router, engine, get_current_user, User
+from oauth2fast_fastapi import (
+    router,
+    startup_database,
+    shutdown_database,
+    get_current_user,
+    User,
+    AuthModel,
+)
 from sqlmodel import SQLModel
 
 app = FastAPI()
@@ -55,9 +65,20 @@ app.include_router(router, prefix="/auth", tags=["Authentication"])
 
 @app.on_event("startup")
 async def startup():
+    # Initialize database connections
+    await startup_database()
+    
     # Create database tables
+    from pgsqlasync2fast_fastapi import get_db_engine
+    engine = get_db_engine("auth")
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        # Create auth tables (User, etc.)
+        await conn.run_sync(AuthModel.metadata.create_all)
+
+@app.on_event("shutdown")
+async def shutdown():
+    # Close database connections
+    await shutdown_database()
 
 @app.get("/protected")
 async def protected_route(current_user: User = Depends(get_current_user)):
@@ -68,18 +89,17 @@ async def protected_route(current_user: User = Depends(get_current_user)):
 
 **Register a new user:**
 ```bash
-POST /auth/users/register
+POST /auth/users/
 {
   "email": "user@example.com",
   "password": "SecurePassword123",
-  "first_name": "John",
-  "last_name": "Doe"
+  "name": "John Doe"
 }
 ```
 
 **Verify email:**
 ```bash
-POST /auth/users/verify-email
+POST /auth/confirm-email
 {
   "token": "verification-token-from-email"
 }
@@ -121,21 +141,6 @@ async def premium_feature(user: User = Depends(get_current_verified_user)):
 
 ## Advanced Usage
 
-### Custom User Model
-
-Extend the base User model with custom fields:
-
-```python
-from oauth2fast_fastapi.models.user_model import User
-from sqlmodel import Field
-
-class CustomUser(User, table=True):
-    __tablename__ = "custom_users"
-    
-    phone_number: str | None = Field(default=None)
-    company: str | None = Field(default=None)
-```
-
 ### Manual Database Session
 
 ```python
@@ -157,22 +162,23 @@ All configuration is done via environment variables with nested delimiter `__`.
 - `ALGORITHM` (default: "HS256"): JWT algorithm
 - `ACCESS_TOKEN_EXPIRE_MINUTES` (default: 60): Token expiration time
 
-### Database Settings
-- `AUTH_DB__USERNAME`: Database username
-- `AUTH_DB__PASSWORD`: Database password
-- `AUTH_DB__HOSTNAME`: Database host
-- `AUTH_DB__NAME`: Database name
-- `AUTH_DB__PORT`: Database port (default: 5432)
+### Database Settings (pgsqlasync2fast-fastapi)
+- `DB_DEFAULT_CONNECTION` (default: "default"): Default database connection name
+- `DB_CONNECTIONS__AUTH__USERNAME`: Database username for auth connection
+- `DB_CONNECTIONS__AUTH__PASSWORD`: Database password for auth connection
+- `DB_CONNECTIONS__AUTH__HOST`: Database host for auth connection
+- `DB_CONNECTIONS__AUTH__DATABASE`: Database name for auth connection
+- `DB_CONNECTIONS__AUTH__PORT`: Database port for auth connection (default: 5432)
 
-### Mail Settings
-- `AUTH_MAIL_SERVER__USERNAME`: SMTP username
-- `AUTH_MAIL_SERVER__PASSWORD`: SMTP password
-- `AUTH_MAIL_SERVER__SERVER`: SMTP server
-- `AUTH_MAIL_SERVER__PORT`: SMTP port
-- `AUTH_MAIL_SERVER__FROM_DIRECTION`: From email address
-- `AUTH_MAIL_SERVER__FROM_NAME`: From name
-- `AUTH_MAIL_SERVER__STARTTLS`: Use STARTTLS (default: false)
-- `AUTH_MAIL_SERVER__SSL_TLS`: Use SSL/TLS (default: true)
+### Mail Settings (mailing2fast-fastapi)
+- `MAIL_DEFAULT_ACCOUNT` (default: "default"): Default SMTP account name
+- `MAIL_SMTP_ACCOUNTS__AUTH__HOST`: SMTP server host for auth account
+- `MAIL_SMTP_ACCOUNTS__AUTH__PORT`: SMTP server port for auth account
+- `MAIL_SMTP_ACCOUNTS__AUTH__USERNAME`: SMTP username for auth account
+- `MAIL_SMTP_ACCOUNTS__AUTH__PASSWORD`: SMTP password for auth account
+- `MAIL_SMTP_ACCOUNTS__AUTH__FROM_EMAIL`: From email address for auth account
+- `MAIL_SMTP_ACCOUNTS__AUTH__FROM_NAME`: From name for auth account
+- `MAIL_SMTP_ACCOUNTS__AUTH__SECURITY`: Security protocol (none, tls, starttls)
 
 ### Application Settings
 - `PROJECT_NAME`: Application name (used in emails)
@@ -198,15 +204,45 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 1. Check your SMTP settings in `.env`
 2. Verify `FRONTEND_URL` is correct
-3. Check email templates in `mail/templates/`
+3. Ensure `MAIL_DEFAULT_ACCOUNT` is set to "auth"
+4. Check that all `MAIL_SMTP_ACCOUNTS__AUTH__*` variables are configured
 
 ### Database Connection Issues
 
-Ensure your database URL is correct and the database exists:
+Ensure your database configuration is correct:
 ```bash
-AUTH_DB__USERNAME=postgres
-AUTH_DB__PASSWORD=password
-AUTH_DB__HOSTNAME=localhost
-AUTH_DB__NAME=mydb
-AUTH_DB__PORT=5432
+DB_DEFAULT_CONNECTION=auth
+DB_CONNECTIONS__AUTH__USERNAME=postgres
+DB_CONNECTIONS__AUTH__PASSWORD=password
+DB_CONNECTIONS__AUTH__HOST=localhost
+DB_CONNECTIONS__AUTH__DATABASE=mydb
+DB_CONNECTIONS__AUTH__PORT=5432
 ```
+
+## Migration from v0.1.x to v0.2.0
+
+Version 0.2.0 introduces breaking changes in environment variable structure:
+
+**Database variables changed:**
+- `AUTH_DB__USERNAME` → `DB_CONNECTIONS__AUTH__USERNAME`
+- `AUTH_DB__PASSWORD` → `DB_CONNECTIONS__AUTH__PASSWORD`
+- `AUTH_DB__HOSTNAME` → `DB_CONNECTIONS__AUTH__HOST`
+- `AUTH_DB__NAME` → `DB_CONNECTIONS__AUTH__DATABASE`
+- `AUTH_DB__PORT` → `DB_CONNECTIONS__AUTH__PORT`
+
+**Email variables changed:**
+- `AUTH_MAIL_SERVER__USERNAME` → `MAIL_SMTP_ACCOUNTS__AUTH__USERNAME`
+- `AUTH_MAIL_SERVER__PASSWORD` → `MAIL_SMTP_ACCOUNTS__AUTH__PASSWORD`
+- `AUTH_MAIL_SERVER__SERVER` → `MAIL_SMTP_ACCOUNTS__AUTH__HOST`
+- `AUTH_MAIL_SERVER__PORT` → `MAIL_SMTP_ACCOUNTS__AUTH__PORT`
+- `AUTH_MAIL_SERVER__FROM_DIRECTION` → `MAIL_SMTP_ACCOUNTS__AUTH__FROM_EMAIL`
+- `AUTH_MAIL_SERVER__FROM_NAME` → `MAIL_SMTP_ACCOUNTS__AUTH__FROM_NAME`
+- `AUTH_MAIL_SERVER__STARTTLS` and `AUTH_MAIL_SERVER__SSL_TLS` → `MAIL_SMTP_ACCOUNTS__AUTH__SECURITY` (values: "none", "tls", "starttls")
+
+**New required variables:**
+- `DB_DEFAULT_CONNECTION=auth`
+- `MAIL_DEFAULT_ACCOUNT=auth`
+
+**Code changes:**
+- `from oauth2fast_fastapi import engine` → `from oauth2fast_fastapi import get_db_engine`
+- Add `startup_database()` and `shutdown_database()` to app lifecycle events

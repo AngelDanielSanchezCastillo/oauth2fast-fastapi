@@ -1,31 +1,12 @@
 import os
 
-from pydantic import BaseModel, SecretStr
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Find .env in the application's root directory (where the app is installed)
 # This allows the module to work independently in any application
 BASE_DIR = os.getcwd()
 DOTENV_PATH = os.path.join(BASE_DIR, ".env")
-
-
-class DatabaseSettings(BaseModel):
-    username: str = "DefaultUser"
-    password: SecretStr = SecretStr("DefaultPassword")
-    hostname: str = "localhost"
-    name: str = "DefaultDatabase"
-    port: int = 5432
-
-
-class MailSettings(BaseModel):
-    username: str = "DefaultUser"
-    password: SecretStr = SecretStr("DefaultPassword")
-    server: str = "localhost"
-    port: int = 465
-    from_direction: str = "email@email.test"
-    from_name: str = "Your Service Name"
-    starttls: bool = False
-    ssl_tls: bool = True
 
 
 class Settings(BaseSettings):
@@ -38,12 +19,6 @@ class Settings(BaseSettings):
     secret_key: SecretStr  # Required - no default value
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-
-    # Database configurations
-    auth_db: DatabaseSettings = DatabaseSettings()
-
-    # Mail configuration
-    auth_mail_server: MailSettings = MailSettings()
 
     model_config = SettingsConfigDict(
         env_file=DOTENV_PATH,
@@ -69,3 +44,4 @@ except Exception as e:
         },
     )
     raise
+

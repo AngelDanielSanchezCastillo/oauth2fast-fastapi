@@ -5,6 +5,6 @@ from .mixins import TimestampMixin
 metadata = MetaData()
 
 
-class BaseModel(TimestampMixin, SQLModel):
+class AuthModel(TimestampMixin, SQLModel):
     __abstract__ = True
     metadata = metadata

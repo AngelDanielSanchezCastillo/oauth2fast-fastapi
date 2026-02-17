@@ -4,12 +4,12 @@ from sqlmodel import (
     Field,
 )
 
-from .bases import BaseModel
+from .bases import AuthModel
 
 
 # Database model for User
 # This model represents a user registered in the database
-class User(BaseModel, table=True):
+class User(AuthModel, table=True):
     __tablename__ = "users"
 
     id: int = Field(
