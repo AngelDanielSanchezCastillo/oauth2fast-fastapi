@@ -7,9 +7,9 @@ This example shows how to extend the base User model with custom fields.
 from datetime import datetime
 
 from fastapi import Depends, FastAPI
-from oauth2fast_fastapi import engine, get_current_user
+from oauth2fast_fastapi import engine, get_current_user, AuthModel
 from oauth2fast_fastapi.models.user_model import User as BaseUser
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
 
 # Extend the base User model with custom fields
 class CustomUser(BaseUser, table=True):
@@ -29,7 +29,7 @@ app = FastAPI(title="Custom User Model Example")
 async def startup():
     """Create database tables on startup"""
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(AuthModel.metadata.create_all)
     print("✅ Custom user tables created")
 
 
