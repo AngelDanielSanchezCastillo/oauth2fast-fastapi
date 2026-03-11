@@ -12,12 +12,12 @@ This example demonstrates:
 from fastapi import Depends, FastAPI
 from oauth2fast_fastapi import (
     User,
+    AuthModel,
     engine,
     get_current_user,
     get_current_verified_user,
     router,
 )
-from sqlmodel import SQLModel
 
 app = FastAPI(
     title="Complete Auth Flow Example",
@@ -32,7 +32,7 @@ app.include_router(router, prefix="/auth", tags=["Authentication"])
 async def startup():
     """Create database tables on startup"""
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(AuthModel.metadata.create_all)
     print("✅ Database ready")
     print("\n📋 Authentication Flow:")
     print("1. Register: POST /auth/users/register")

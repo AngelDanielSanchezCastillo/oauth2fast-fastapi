@@ -5,8 +5,7 @@ This example shows how to integrate oauth2fast-fastapi into a FastAPI applicatio
 """
 
 from fastapi import Depends, FastAPI
-from oauth2fast_fastapi import User, engine, get_current_user, router
-from sqlmodel import SQLModel
+from oauth2fast_fastapi import User, engine, get_current_user, router, AuthModel
 
 app = FastAPI(
     title="OAuth2Fast Example",
@@ -21,7 +20,7 @@ app.include_router(router, prefix="/auth", tags=["Authentication"])
 async def startup():
     """Create database tables on startup"""
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(AuthModel.metadata.create_all)
     print("✅ Database tables created")
     print("📝 Register a user at: POST /auth/users/register")
     print("🔐 Login at: POST /auth/token")
