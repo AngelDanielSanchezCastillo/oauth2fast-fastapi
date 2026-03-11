@@ -60,9 +60,10 @@ async def setup_database():
     
     yield
     
-    # Cleanup: Drop tables
+    # Cleanup: Drop tables with CASCADE to handle dependent tables created by tests
     async with engine.begin() as conn:
-        await conn.run_sync(AuthModel.metadata.drop_all)
+        for table in reversed(AuthModel.metadata.sorted_tables):
+            await conn.execute(pytest.importorskip("sqlalchemy").text(f"DROP TABLE IF EXISTS {table.name} CASCADE"))
     
     # Shutdown database connections
     await shutdown_database()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "oauth2fast-fastapi"
-version = "0.2.2"
+version = "0.2.3"
 description = "Fast and secure OAuth2 authentication module for FastAPI with email verification"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -42,13 +42,20 @@ dependencies = [
     "sqlmodel>=0.0.16",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "black",
+    "ruff",
+    "mypy>=1.0.0",
+    "pre-commit",
+    "build",
+    "twine",
+]
+test = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
     "httpx>=0.24.0",
-    "mypy>=1.0.0",
 ]
 
 [project.urls]

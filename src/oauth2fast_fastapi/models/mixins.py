@@ -1,7 +1,15 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, func
-from sqlmodel import Column
+from sqlmodel import BigInteger, Column, Field
+
+
+class IdMixin:
+    """Mixin para proveer clave primaria autoincremental tipo BigInteger."""
+
+    id: int = Field(
+        default=None, sa_column=Column(BigInteger, index=True, primary_key=True)
+    )
 
 
 class TimestampMixin:
@@ -17,6 +25,21 @@ class TimestampMixin:
         nullable=False,
         default=lambda: datetime.now(UTC),
         onupdate=func.now(),
+    )
+
+
+class AuditMixin:
+    """Mixin para rastrear el usuario que crea y actualiza un registro."""
+
+    created_by: int | None = Field(
+        default=None,
+        description="ID of the user who created this record.",
+        sa_column=Column(BigInteger),
+    )
+    updated_by: int | None = Field(
+        default=None,
+        description="ID of the user who last updated this record.",
+        sa_column=Column(BigInteger),
     )
 
 
