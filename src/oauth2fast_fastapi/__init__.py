@@ -10,7 +10,7 @@ from .database import (
     startup_database,
 )
 from .dependencies import get_auth_session, get_current_user, get_current_verified_user
-from .models.bases import AuthModel
+from .models.bases import AuthModel, BasicAuthModel
 from .models.user_model import User
 from .routers.base_router import router
 from .schemas.user_schema import UserCreate, UserRead
@@ -29,6 +29,7 @@ __all__ = [
     "get_current_verified_user",
     # Models and schemas
     "AuthModel",
+    "BasicAuthModel",
     "User",
     "UserCreate",
     "UserRead",

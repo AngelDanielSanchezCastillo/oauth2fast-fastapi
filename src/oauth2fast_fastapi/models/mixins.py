@@ -1,30 +1,28 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, func
-from sqlmodel import BigInteger, Column, Field
+from sqlmodel import BigInteger, Field
 
 
 class IdMixin:
     """Mixin para proveer clave primaria autoincremental tipo BigInteger."""
 
-    id: int = Field(
-        default=None, sa_column=Column(BigInteger, index=True, primary_key=True)
-    )
+    id: int | None = Field(default=None, primary_key=True, index=True, sa_type=BigInteger)
 
 
 class TimestampMixin:
     """Mixin reutilizable para marcas de tiempo en UTC."""
 
-    created_at = Column(
-        DateTime(timezone=True),
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
         nullable=False,
-        default=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),
     )
-    updated_at = Column(
-        DateTime(timezone=True),
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=func.now(),
+        sa_type=DateTime(timezone=True),
+        sa_column_kwargs={"onupdate": func.now()},
     )
 
 
@@ -34,12 +32,12 @@ class AuditMixin:
     created_by: int | None = Field(
         default=None,
         description="ID of the user who created this record.",
-        sa_column=Column(BigInteger),
+        sa_type=BigInteger,
     )
     updated_by: int | None = Field(
         default=None,
         description="ID of the user who last updated this record.",
-        sa_column=Column(BigInteger),
+        sa_type=BigInteger,
     )
 
 
