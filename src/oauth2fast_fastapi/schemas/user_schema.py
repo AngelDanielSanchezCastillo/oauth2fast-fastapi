@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel
 
-from .mixins import TimestampMixin
+from tools2fast_fastapi import TimestampMixin
 
 
 class UserBase(SQLModel):

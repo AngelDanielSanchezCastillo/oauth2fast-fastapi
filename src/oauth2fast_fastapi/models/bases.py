@@ -1,18 +1,23 @@
 from sqlmodel import MetaData, SQLModel
 
-from .mixins import IdMixin, TimestampMixin
+from tools2fast_fastapi import IdMixin, TimestampMixin
 
 metadata = MetaData()
 
-
-class BasicAuthModel(TimestampMixin, SQLModel):
-    """Base model without predefined primary key, but with timestamps."""
-
+class BasicModel(SQLModel):
     __abstract__ = True
     metadata = metadata
 
+class BasicAuthModel(TimestampMixin, BasicModel):
+    """Base model without predefined primary key, but with timestamps."""
 
-class AuthModel(IdMixin, BasicAuthModel):
+    __abstract__ = True
+
+class IdAuthModel(IdMixin, BasicModel):
+    """Base model with BigInteger primary key."""
+    __abstract__ = True
+
+class AuthModel(TimestampMixin, IdAuthModel):
     """Default base model with BigInteger primary key and timestamps."""
 
     __abstract__ = True

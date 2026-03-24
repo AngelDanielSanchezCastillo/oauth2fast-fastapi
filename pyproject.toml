@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "oauth2fast-fastapi"
-version = "0.2.5"
+version = "0.2.6"
 description = "Fast and secure OAuth2 authentication module for FastAPI with email verification"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,18 +28,20 @@ classifiers = [
 
 dependencies = [
     # External modules (include their own dependencies)
+    # Databases
     "pgsqlasync2fast-fastapi>=0.1.2",
+    # Mailing
     "mailing2fast-fastapi>=0.2.1",
+    # Logging
+    "log2fast-fastapi>=0.1.2",
+    # Tools
+    "tools2fast-fastapi>=0.1.0",
     # JWT and authentication
     "python-jose[cryptography]>=3.3.0",
     "passlib[argon2]>=1.7.4",
     "argon2-cffi>=25.0.0",  # Required for Argon2 password hashing
     # Form data handling
     "python-multipart>=0.0.6",
-    # Logging
-    "log2fast-fastapi>=0.1.2",
-    # ORM
-    "sqlmodel>=0.0.16",
 ]
 
 [dependency-groups]
@@ -77,6 +79,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 python_version = "3.10"
