@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from ..dependencies import get_auth_session
@@ -44,8 +44,8 @@ async def login(
         HTTPException: If credentials are invalid
     """
     # Get user by email (username in OAuth2 form)
-    result = await session.execute(select(User).where(User.email == form_data.username))
-    user = result.scalar_one_or_none()
+    result = await session.exec(select(User).where(User.email == form_data.username))
+    user = result.one_or_none()
 
     # Verify user exists and password is correct
     if not user or not verify_password(form_data.password, user.password):

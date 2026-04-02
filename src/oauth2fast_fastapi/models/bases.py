@@ -15,6 +15,7 @@ class BasicAuthModel(TimestampMixin, BasicModel):
 
 class IdAuthModel(IdMixin, BasicModel):
     """Base model with BigInteger primary key."""
+    
     __abstract__ = True
 
 class AuthModel(TimestampMixin, IdAuthModel):

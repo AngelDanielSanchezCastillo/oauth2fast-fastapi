@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "oauth2fast-fastapi"
-version = "0.2.6"
+version = "0.3.0"
 description = "Fast and secure OAuth2 authentication module for FastAPI with email verification"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,9 +29,9 @@ classifiers = [
 dependencies = [
     # External modules (include their own dependencies)
     # Databases
-    "pgsqlasync2fast-fastapi>=0.1.2",
+    "pgsqlasync2fast-fastapi>=0.2.0",
     # Mailing
-    "mailing2fast-fastapi>=0.2.1",
+    "mailing2fast-fastapi>=0.2.2",
     # Logging
     "log2fast-fastapi>=0.1.2",
     # Tools

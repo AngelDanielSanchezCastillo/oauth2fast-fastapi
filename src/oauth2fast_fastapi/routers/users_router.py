@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from ..dependencies import get_auth_session
@@ -94,8 +94,8 @@ async def read_auth_users(
     Returns:
         List of all users
     """
-    result = await session.execute(select(User))
-    users = result.scalars().all()
+    result = await session.exec(select(User))
+    users = result.all()
 
     return [
         UserRead(
@@ -129,8 +129,8 @@ async def read_user_by_email(
         HTTPException: If user not found
     """
     # Find user by email
-    result = await session.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    result = await session.exec(select(User).where(User.email == email))
+    user = result.one_or_none()
 
     if not user:
         raise HTTPException(
@@ -175,8 +175,8 @@ async def confirm_email(
         )
 
     # Find user by email
-    result = await session.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    result = await session.exec(select(User).where(User.email == email))
+    user = result.one_or_none()
 
     if not user:
         raise HTTPException(
@@ -221,8 +221,8 @@ async def resend_verification(
         HTTPException: If user not found or already verified
     """
     # Find user by email
-    result = await session.execute(select(User).where(User.email == request.email))
-    user = result.scalar_one_or_none()
+    result = await session.exec(select(User).where(User.email == request.email))
+    user = result.one_or_none()
 
     if not user:
         raise HTTPException(

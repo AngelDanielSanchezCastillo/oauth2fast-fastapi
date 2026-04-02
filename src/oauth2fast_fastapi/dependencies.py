@@ -3,7 +3,7 @@ from functools import partial
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pgsqlasync2fast_fastapi import get_db_session
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from .models.user_model import User
@@ -59,8 +59,8 @@ async def get_current_user(
     token_data = TokenData(email=email)
 
     # Get user from database
-    result = await session.execute(select(User).where(User.email == token_data.email))
-    user = result.scalar_one_or_none()
+    result = await session.exec(select(User).where(User.email == token_data.email))
+    user = result.one_or_none()
 
     if user is None:
         raise credentials_exception
