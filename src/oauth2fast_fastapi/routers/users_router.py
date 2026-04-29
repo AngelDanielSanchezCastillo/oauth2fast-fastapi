@@ -1,18 +1,34 @@
 from collections.abc import Sequence
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
+
+from tools2fast_fastapi import APIResponse
 
 from ..dependencies import get_auth_session
 from ..mail import send_verification_email
 from ..models.user_model import User
 from ..schemas.user_schema import UserCreate, UserRead
+from ..schemas.response_schemas import (
+    UserCreatedResponse,
+    UserListResponse,
+    UserSingleResponse,
+    UserErrorResponse,
+    UserResponse,
+)
 from ..schemas.verification_schema import (
     EmailVerificationRequest,
     ResendVerificationRequest,
-    VerificationResponse,
+)
+from ..schemas.response_schemas import (
+    EmailVerificationSuccessResponse,
+    EmailVerificationErrorResponse,
+    ResendVerificationSuccessResponse,
+    ResendVerificationErrorResponse,
+    VerificationResponseModel,
 )
 from ..settings import settings
 from ..utils.password_utils import hash_password
@@ -24,10 +40,16 @@ from ..utils.verification_utils import (
 router = APIRouter()
 
 
-@router.post("/users/", response_model=UserRead)
+@router.post(
+    "/users/",
+    response_model=UserCreatedResponse,
+    responses={
+        400: {"model": UserErrorResponse, "description": "Email already exists"},
+    },
+)
 async def create_auth_user(
     user_data: UserCreate, session: AsyncSession = Depends(get_auth_session)
-) -> UserRead:
+) -> JSONResponse | UserCreatedResponse:
     """
     Create a new user with hashed password and send verification email.
 
@@ -36,10 +58,10 @@ async def create_auth_user(
         session: Database session
 
     Returns:
-        Created user data
+        UserCreatedResponse with created user data
 
     Raises:
-        HTTPException: If email already exists
+        JSONResponse: If email already exists (400)
     """
     # Hash the password before storing
     hashed_password = hash_password(user_data.password)
@@ -68,23 +90,32 @@ async def create_auth_user(
             # Log error but don't fail user creation
             print(f"Warning: Failed to send verification email: {e}")
 
-        return UserRead(
-            id=user.id,
-            email=user.email,
-            name=user.name,
-            is_verified=user.is_verified,
-            created_at=user.created_at,
-            updated_at=user.updated_at,
+        return UserCreatedResponse(
+            user=UserResponse(
+                id=user.id,
+                email=user.email,
+                name=user.name,
+                is_verified=user.is_verified,
+                created_at=str(user.created_at) if user.created_at else None,
+                updated_at=str(user.updated_at) if user.updated_at else None,
+            )
         )
     except IntegrityError:
         await session.rollback()
-        raise HTTPException(status_code=400, detail="El email ya existe")
+        error_resp, http_status = APIResponse.fail(
+            message="El email ya existe",
+            status_code=400,
+        )
+        return JSONResponse(status_code=http_status, content=error_resp.model_dump())
 
 
-@router.get("/users/", response_model=list[UserRead])
+@router.get(
+    "/users/",
+    response_model=UserListResponse,
+)
 async def read_auth_users(
     session: AsyncSession = Depends(get_auth_session),
-) -> Sequence[UserRead]:
+) -> UserListResponse:
     """
     Get all users (for testing purposes).
 
@@ -92,29 +123,40 @@ async def read_auth_users(
         session: Database session
 
     Returns:
-        List of all users
+        UserListResponse with list of all users
     """
     result = await session.exec(select(User))
     users = result.all()
 
-    return [
-        UserRead(
+    user_responses = [
+        UserResponse(
             id=u.id,
             email=u.email,
             name=u.name,
             is_verified=u.is_verified,
-            created_at=u.created_at,
-            updated_at=u.updated_at,
+            created_at=str(u.created_at) if u.created_at else None,
+            updated_at=str(u.updated_at) if u.updated_at else None,
         )
         for u in users
     ]
 
+    return UserListResponse(
+        users=user_responses,
+        count=len(user_responses),
+    )
 
-@router.get("/users/by-email/{email}", response_model=UserRead)
+
+@router.get(
+    "/users/by-email/{email}",
+    response_model=UserSingleResponse,
+    responses={
+        404: {"model": UserErrorResponse, "description": "User not found"},
+    },
+)
 async def read_user_by_email(
     email: str,
     session: AsyncSession = Depends(get_auth_session),
-) -> UserRead:
+) -> JSONResponse | UserSingleResponse:
     """
     Read a user by email.
 
@@ -123,36 +165,46 @@ async def read_user_by_email(
         session: Database session
 
     Returns:
-        User data
+        UserSingleResponse with user data
 
     Raises:
-        HTTPException: If user not found
+        JSONResponse: If user not found (404)
     """
     # Find user by email
     result = await session.exec(select(User).where(User.email == email))
     user = result.one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado",
+        error_resp, http_status = APIResponse.fail(
+            message="Usuario no encontrado",
+            status_code=404,
         )
+        return JSONResponse(status_code=http_status, content=error_resp.model_dump())
 
-    return UserRead(
-        id=user.id,
-        email=user.email,
-        name=user.name,
-        is_verified=user.is_verified,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
+    return UserSingleResponse(
+        user=UserResponse(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            is_verified=user.is_verified,
+            created_at=str(user.created_at) if user.created_at else None,
+            updated_at=str(user.updated_at) if user.updated_at else None,
+        )
     )
 
 
-@router.post("/confirm-email", response_model=VerificationResponse)
+@router.post(
+    "/confirm-email",
+    response_model=EmailVerificationSuccessResponse,
+    responses={
+        400: {"model": EmailVerificationErrorResponse, "description": "Invalid token"},
+        404: {"model": EmailVerificationErrorResponse, "description": "User not found"},
+    },
+)
 async def confirm_email(
     request: EmailVerificationRequest,
     session: AsyncSession = Depends(get_auth_session),
-) -> VerificationResponse:
+) -> JSONResponse | EmailVerificationSuccessResponse:
     """
     Confirm user email with verification token.
 
@@ -161,34 +213,39 @@ async def confirm_email(
         session: Database session
 
     Returns:
-        Verification response
+        EmailVerificationSuccessResponse on success
 
     Raises:
-        HTTPException: If token is invalid or user not found
+        JSONResponse: If token is invalid (400) or user not found (404)
     """
     # Verify token and extract email
     email = verify_verification_token(request.token)
     if not email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token de verificación inválido o expirado",
+        error_resp, http_status = APIResponse.fail(
+            message="Token de verificación inválido o expirado",
+            status_code=400,
         )
+        return JSONResponse(status_code=http_status, content=error_resp.model_dump())
 
     # Find user by email
     result = await session.exec(select(User).where(User.email == email))
     user = result.one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado",
+        error_resp, http_status = APIResponse.fail(
+            message="Usuario no encontrado",
+            status_code=404,
         )
+        return JSONResponse(status_code=http_status, content=error_resp.model_dump())
 
     # Check if already verified
     if user.is_verified:
-        return VerificationResponse(
+        return EmailVerificationSuccessResponse(
             message="El email ya ha sido verificado previamente",
-            success=True,
+            data=VerificationResponseModel(
+                message="El email ya ha sido verificado previamente",
+                success=True,
+            ),
         )
 
     # Mark user as verified
@@ -196,17 +253,27 @@ async def confirm_email(
     session.add(user)
     await session.commit()
 
-    return VerificationResponse(
+    return EmailVerificationSuccessResponse(
         message="Email verificado exitosamente",
-        success=True,
+        data=VerificationResponseModel(
+            message="Email verificado exitosamente",
+            success=True,
+        ),
     )
 
 
-@router.post("/resend-verification", response_model=VerificationResponse)
+@router.post(
+    "/resend-verification",
+    response_model=ResendVerificationSuccessResponse,
+    responses={
+        400: {"model": ResendVerificationErrorResponse, "description": "Already verified"},
+        404: {"model": ResendVerificationErrorResponse, "description": "User not found"},
+    },
+)
 async def resend_verification(
     request: ResendVerificationRequest,
     session: AsyncSession = Depends(get_auth_session),
-) -> VerificationResponse:
+) -> JSONResponse | ResendVerificationSuccessResponse:
     """
     Resend verification email to user.
 
@@ -215,27 +282,29 @@ async def resend_verification(
         session: Database session
 
     Returns:
-        Verification response
+        ResendVerificationSuccessResponse on success
 
     Raises:
-        HTTPException: If user not found or already verified
+        JSONResponse: If user not found (404) or already verified (400)
     """
     # Find user by email
     result = await session.exec(select(User).where(User.email == request.email))
     user = result.one_or_none()
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado",
+        error_resp, http_status = APIResponse.fail(
+            message="Usuario no encontrado",
+            status_code=404,
         )
+        return JSONResponse(status_code=http_status, content=error_resp.model_dump())
 
     # Check if already verified
     if user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El email ya está verificado",
+        error_resp, http_status = APIResponse.fail(
+            message="El email ya está verificado",
+            status_code=400,
         )
+        return JSONResponse(status_code=http_status, content=error_resp.model_dump())
 
     # Generate new verification token and send email
     verification_token = create_verification_token(user.email)
@@ -243,7 +312,10 @@ async def resend_verification(
 
     await send_verification_email(user.email, verification_url)
 
-    return VerificationResponse(
+    return ResendVerificationSuccessResponse(
         message="Email de verificación enviado exitosamente",
-        success=True,
+        data=VerificationResponseModel(
+            message="Email de verificación enviado exitosamente",
+            success=True,
+        ),
     )

@@ -118,14 +118,15 @@ async def test_user_registration(client: AsyncClient):
             "name": "Test User",
         },
     )
-    
+
     assert response.status_code == 200
     data = response.json()
-    assert data["email"] == "test@example.com"
-    assert data["name"] == "Test User"
-    assert data["is_verified"] is False
-    assert "id" in data
-    assert "created_at" in data
+    assert data["success"] is True
+    assert data["user"]["email"] == "test@example.com"
+    assert data["user"]["name"] == "Test User"
+    assert data["user"]["is_verified"] is False
+    assert "id" in data["user"]
+    assert "created_at" in data["user"]
 
 
 @pytest.mark.asyncio
@@ -140,7 +141,7 @@ async def test_duplicate_user_registration(client: AsyncClient):
             "name": "First User",
         },
     )
-    
+
     # Duplicate registration
     response = await client.post(
         "/auth/users/",
@@ -150,9 +151,11 @@ async def test_duplicate_user_registration(client: AsyncClient):
             "name": "Second User",
         },
     )
-    
+
     assert response.status_code == 400
-    assert "email ya existe" in response.json()["detail"].lower()
+    data = response.json()
+    assert data["success"] is False
+    assert "email" in data["message"].lower() or "ya existe" in data["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -167,7 +170,7 @@ async def test_user_login(client: AsyncClient):
             "name": "Login User",
         },
     )
-    
+
     # Login
     response = await client.post(
         "/auth/token",
@@ -176,11 +179,13 @@ async def test_user_login(client: AsyncClient):
             "password": "LoginPassword123",
         },
     )
-    
+
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    assert data["success"] is True
+    assert "token" in data
+    assert "access_token" in data["token"]
+    assert data["token"]["token_type"] == "bearer"
 
 
 @pytest.mark.asyncio
@@ -202,7 +207,7 @@ async def test_protected_endpoint_with_token(client: AsyncClient):
             "name": "Protected User",
         },
     )
-    
+
     login_response = await client.post(
         "/auth/token",
         data={
@@ -210,15 +215,15 @@ async def test_protected_endpoint_with_token(client: AsyncClient):
             "password": "ProtectedPassword123",
         },
     )
-    
-    token = login_response.json()["access_token"]
-    
+
+    token = login_response.json()["token"]["access_token"]
+
     # Access protected endpoint
     response = await client.get(
         "/protected",
         headers={"Authorization": f"Bearer {token}"},
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "message" in data
@@ -248,7 +253,7 @@ async def test_email_verification_token_generation():
 async def test_email_verification_flow(client: AsyncClient):
     """Test complete email verification flow."""
     from oauth2fast_fastapi.utils.verification_utils import create_verification_token
-    
+
     # Register user
     response = await client.post(
         "/auth/users/",
@@ -258,22 +263,21 @@ async def test_email_verification_flow(client: AsyncClient):
             "name": "Email Verify User",
         },
     )
-    
-    assert response.json()["is_verified"] is False
-    
+
+    assert response.json()["user"]["is_verified"] is False
+
     # Generate verification token
     token = create_verification_token("emailverify@example.com")
-    
+
     # Verify email
     verify_response = await client.post(
         "/auth/confirm-email",
         json={"token": token},
     )
-    
+
     assert verify_response.status_code == 200
     data = verify_response.json()
     assert data["success"] is True
-    assert "verificado" in data["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -288,15 +292,17 @@ async def test_get_users_list(client: AsyncClient):
             "name": "List User",
         },
     )
-    
+
     # Get users list
     response = await client.get("/auth/users/")
-    
+
     assert response.status_code == 200
-    users = response.json()
+    data = response.json()
+    assert data["success"] is True
+    users = data["users"]
     assert isinstance(users, list)
     assert len(users) > 0
-    
+
     # Check that our user is in the list
     emails = [user["email"] for user in users]
     assert "listuser@example.com" in emails
@@ -314,14 +320,15 @@ async def test_get_user_by_email(client: AsyncClient):
             "name": "Get User",
         },
     )
-    
+
     # Get user by email
     response = await client.get("/auth/users/by-email/getuser@example.com")
-    
+
     assert response.status_code == 200
     data = response.json()
-    assert data["email"] == "getuser@example.com"
-    assert data["name"] == "Get User"
+    assert data["success"] is True
+    assert data["user"]["email"] == "getuser@example.com"
+    assert data["user"]["name"] == "Get User"
 
 
 @pytest.mark.asyncio

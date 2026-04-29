@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
+from tools2fast_fastapi import APIResponse
+
 from ..dependencies import get_auth_session
 from ..models.user_model import User
-from ..schemas.token_schema import Token
+from ..schemas.response_schemas import TokenSuccessResponse, TokenErrorResponse
 from ..settings import settings
 from ..utils.password_utils import verify_password
 from ..utils.token_utils import create_access_token
@@ -25,11 +28,17 @@ router = APIRouter(
 router.include_router(users_router)
 
 
-@router.post("/token", response_model=Token)
+@router.post(
+    "/token",
+    response_model=TokenSuccessResponse,
+    responses={
+        401: {"model": TokenErrorResponse, "description": "Invalid credentials"},
+    },
+)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_auth_session),
-) -> Token:
+) -> JSONResponse | TokenSuccessResponse:
     """
     OAuth2 compatible token login endpoint.
 
@@ -38,10 +47,10 @@ async def login(
         session: Database session
 
     Returns:
-        Token with access_token and token_type
+        TokenSuccessResponse with access_token and token_type
 
     Raises:
-        HTTPException: If credentials are invalid
+        JSONResponse: If credentials are invalid (401)
     """
     # Get user by email (username in OAuth2 form)
     result = await session.exec(select(User).where(User.email == form_data.username))
@@ -49,13 +58,19 @@ async def login(
 
     # Verify user exists and password is correct
     if not user or not verify_password(form_data.password, user.password):
-        raise HTTPException(
+        error_resp, http_status = APIResponse.fail(
+            message="Incorrect email or password",
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+        )
+        return JSONResponse(
+            status_code=http_status,
+            content=error_resp.model_dump(),
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     # Create access token
     access_token = create_access_token(data={"sub": user.email})
 
-    return Token(access_token=access_token, token_type="bearer")
+    return TokenSuccessResponse(
+        token={"access_token": access_token, "token_type": "bearer"}
+    )
