@@ -240,6 +240,31 @@ All configuration is done via environment variables with nested delimiter `__`.
 - **[Usage Guide](docs/usage.md)** - Comprehensive usage guide with examples
 - **[Environment Configuration](docs/env.example)** - All configuration options
 
+## 📋 Naming Conventions
+
+This package follows consistent naming conventions for models and database tables:
+
+### Model Classes (Python)
+- **Singular** PascalCase
+- Examples: `User`, `Role`, `Permission`, `Tenant`
+
+### Database Tables
+- **Plural** snake_case
+- Examples: `users`, `roles`, `permissions`, `tenants`
+
+### Many-to-Many Join Tables
+- **Plural** snake_case on both table names
+- **Alphabetical order** of the two table names
+- Examples: `role_users` (r < u), `permission_roles` (p < r), `tenant_users` (t < u)
+
+### Mapping Tables (Multi-tenancy)
+- In Auth DB: `TenantUser` class → `tenant_users` table (maps users ↔ tenants)
+- In Tenant DB: `User` class → `users` table (local tenant user profile)
+
+### Generic Categories
+- Use `Category` for generic categorization (not `PermissionCategory`)
+- Can be reused across different entity types (roles, permissions, products, etc.)
+
 ## 📁 Module Structure
 
 ```
