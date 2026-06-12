@@ -308,7 +308,7 @@ async def resend_verification(
 
     # Generate new verification token and send email
     verification_token = create_verification_token(user.email)
-    verification_url = f"{settings.frontend_url}verify-email?token={verification_token}"
+    verification_url = f"{settings.frontend_url}/verify-email?token={verification_token}"
 
     await send_verification_email(user.email, verification_url)
 

@@ -216,3 +216,6 @@ __marimo__/
 logs/
 *.log
 *.log.*
+
+# SDD skill registry and artifacts
+.atl/
