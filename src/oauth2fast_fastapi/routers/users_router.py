@@ -30,9 +30,9 @@ from ..schemas.response_schemas import (
     ResendVerificationErrorResponse,
     VerificationResponseModel,
 )
-from ..settings import settings
 from ..utils.password_utils import hash_password
 from ..utils.verification_utils import (
+    build_verification_url,
     create_verification_token,
     verify_verification_token,
 )
@@ -79,9 +79,7 @@ async def create_auth_user(
 
         # Generate verification token and send email
         verification_token = create_verification_token(user.email)
-        verification_url = (
-            f"{settings.frontend_url}verify-email?token={verification_token}"
-        )
+        verification_url = build_verification_url(verification_token)
 
         # Send verification email (non-blocking, errors are logged)
         try:
@@ -308,7 +306,7 @@ async def resend_verification(
 
     # Generate new verification token and send email
     verification_token = create_verification_token(user.email)
-    verification_url = f"{settings.frontend_url}/verify-email?token={verification_token}"
+    verification_url = build_verification_url(verification_token)
 
     await send_verification_email(user.email, verification_url)
 

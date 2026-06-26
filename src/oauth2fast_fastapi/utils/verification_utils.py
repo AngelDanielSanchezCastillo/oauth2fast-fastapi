@@ -5,6 +5,23 @@ from jose import JWTError, jwt
 from ..settings import settings
 
 
+def build_verification_url(token: str) -> str:
+    """
+    Build the full verification URL for email verification emails.
+
+    Normalizes ``settings.frontend_url`` regardless of trailing slash, so
+    callers always get a correct URL without duplicated or missing slashes.
+
+    Args:
+        token: JWT verification token string
+
+    Returns:
+        Full verification URL pointing to the frontend verify-email page
+    """
+    base = settings.frontend_url.rstrip("/")
+    return f"{base}/verify-email?token={token}"
+
+
 def create_verification_token(email: str) -> str:
     """
     Create a JWT verification token for email verification.
