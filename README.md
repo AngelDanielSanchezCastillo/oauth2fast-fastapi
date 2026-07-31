@@ -234,6 +234,8 @@ All configuration is done via environment variables with nested delimiter `__`.
 - `PROJECT_NAME` - Application name (used in emails)
 - `FRONTEND_URL` - Frontend URL (for email links)
 - `AUTH_URL_PREFIX` - Auth router prefix (default: "auth")
+- `ENFORCE_EMAIL_VERIFICATION` - Require email verification on `/auth/token` (default: `false`)
+- `VERIFICATION_GRACE_DAYS` - Grace period in days for unverified users; unset = immediate rejection (default: none)
 
 ## 📚 Documentation
 

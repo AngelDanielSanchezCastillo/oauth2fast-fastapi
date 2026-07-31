@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
+    # Email verification (opcional): controla si /auth/token exige email verificado
+    # Maestro de activación: False mantiene el comportamiento histórico (sin verificación en login)
+    enforce_email_verification: bool = False
+    # Días de gracia para usuarios no verificados; None = bloqueo inmediato (403)
+    verification_grace_days: int | None = 10
+
     model_config = SettingsConfigDict(
         env_file=DOTENV_PATH,
         env_file_encoding="utf-8",
@@ -44,4 +50,3 @@ except Exception as e:
         },
     )
     raise
-

@@ -1273,7 +1273,7 @@ wheels = [
 
 [[package]]
 name = "oauth2fast-fastapi"
-version = "0.4.4"
+version = "0.4.5"
 source = { editable = "." }
 dependencies = [
     { name = "argon2-cffi" },
