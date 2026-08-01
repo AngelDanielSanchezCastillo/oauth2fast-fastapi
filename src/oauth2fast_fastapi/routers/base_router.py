@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -28,11 +30,26 @@ router = APIRouter(
 router.include_router(users_router)
 
 
+def _days_since_creation(created_at: datetime | None) -> int:
+    """
+    Días transcurridos desde la creación del usuario (0 si no hay fecha).
+
+    Si ``created_at`` es naive se asume UTC antes de restar, para evitar
+    comparar zonas horarias distintas.
+    """
+    if created_at is None:
+        return 0
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - created_at).days
+
+
 @router.post(
     "/token",
     response_model=TokenSuccessResponse,
     responses={
         401: {"model": TokenErrorResponse, "description": "Invalid credentials"},
+        403: {"model": TokenErrorResponse, "description": "Email not verified"},
     },
 )
 async def login(
@@ -50,7 +67,7 @@ async def login(
         TokenSuccessResponse with access_token and token_type
 
     Raises:
-        JSONResponse: If credentials are invalid (401)
+        JSONResponse: If credentials are invalid (401) or email is not verified (403)
     """
     # Get user by email (username in OAuth2 form)
     result = await session.exec(select(User).where(User.email == form_data.username))
@@ -67,6 +84,38 @@ async def login(
             content=error_resp.model_dump(),
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Verificación de email: SIEMPRE exigida (incondicional desde 0.4.6).
+    # enforce_email_verification ya no activa la verificación; solo controla
+    # si se aplica la indulgencia de verification_grace_days (int o None).
+    if not user.is_verified:
+        # Sin indulgencia (flag False o grace_days None): bloqueo inmediato
+        if (
+            not settings.enforce_email_verification
+            or settings.verification_grace_days is None
+        ):
+            error_resp, http_status = APIResponse.fail(
+                message="Email no verificado. Verifica tu email antes de iniciar sesión.",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+            return JSONResponse(
+                status_code=http_status,
+                content=error_resp.model_dump(),
+            )
+
+        # Con periodo de gracia: se bloquea solo si la cuenta excede los días permitidos
+        if _days_since_creation(user.created_at) > settings.verification_grace_days:
+            error_resp, http_status = APIResponse.fail(
+                message=(
+                    "Email no verificado. El periodo de gracia ha expirado. "
+                    "Verifica tu email o solicita un nuevo enlace."
+                ),
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+            return JSONResponse(
+                status_code=http_status,
+                content=error_resp.model_dump(),
+            )
 
     # Create access token
     access_token = create_access_token(data={"sub": user.email})

@@ -7,16 +7,12 @@ with the OAuth2Fast authentication system.
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlmodel import SQLModel
 
 # Import from oauth2fast_fastapi
 from oauth2fast_fastapi import (
     User,
-    UserCreate,
     AuthModel,
-    get_auth_session,
     get_current_user,
     router,
     settings,
@@ -25,8 +21,8 @@ from oauth2fast_fastapi import (
 )
 
 # Import from external modules
-from pgsqlasync2fast_fastapi import get_db_engine, get_manager
-from httpx import AsyncClient, ASGITransport
+from pgsqlasync2fast_fastapi import get_manager
+from httpx import ASGITransport
 
 
 @pytest.fixture(scope="module")
@@ -171,6 +167,13 @@ async def test_user_login(client: AsyncClient):
         },
     )
 
+    # Since 0.4.6 email verification is unconditional: verify the email
+    # (the subject of this test is the login flow, not the verification policy).
+    from oauth2fast_fastapi.utils.verification_utils import create_verification_token
+
+    token = create_verification_token("login@example.com")
+    await client.post("/auth/confirm-email", json={"token": token})
+
     # Login
     response = await client.post(
         "/auth/token",
@@ -207,6 +210,13 @@ async def test_protected_endpoint_with_token(client: AsyncClient):
             "name": "Protected User",
         },
     )
+
+    # Since 0.4.6 email verification is unconditional: verify the email
+    # (the subject of this test is the protected endpoint, not the policy).
+    from oauth2fast_fastapi.utils.verification_utils import create_verification_token
+
+    token = create_verification_token("protected@example.com")
+    await client.post("/auth/confirm-email", json={"token": token})
 
     login_response = await client.post(
         "/auth/token",
