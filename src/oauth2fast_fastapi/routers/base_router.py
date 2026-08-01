@@ -85,11 +85,15 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verificación de email con periodo de gracia opcional (desactivada por defecto)
-    grace_days = settings.verification_grace_days
-    if settings.enforce_email_verification and not user.is_verified:
-        # Sin periodo de gracia configurado: bloqueo inmediato
-        if grace_days is None:
+    # Verificación de email: SIEMPRE exigida (incondicional desde 0.4.6).
+    # enforce_email_verification ya no activa la verificación; solo controla
+    # si se aplica la indulgencia de verification_grace_days (int o None).
+    if not user.is_verified:
+        # Sin indulgencia (flag False o grace_days None): bloqueo inmediato
+        if (
+            not settings.enforce_email_verification
+            or settings.verification_grace_days is None
+        ):
             error_resp, http_status = APIResponse.fail(
                 message="Email no verificado. Verifica tu email antes de iniciar sesión.",
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -100,7 +104,7 @@ async def login(
             )
 
         # Con periodo de gracia: se bloquea solo si la cuenta excede los días permitidos
-        if _days_since_creation(user.created_at) > grace_days:
+        if _days_since_creation(user.created_at) > settings.verification_grace_days:
             error_resp, http_status = APIResponse.fail(
                 message=(
                     "Email no verificado. El periodo de gracia ha expirado. "

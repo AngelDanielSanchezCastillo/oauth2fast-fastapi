@@ -1,6 +1,6 @@
 import os
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Find .env in the application's root directory (where the app is installed)
@@ -20,11 +20,31 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
-    # Email verification (opcional): controla si /auth/token exige email verificado
-    # Maestro de activación: False mantiene el comportamiento histórico (sin verificación en login)
+    # Email verification: SIEMPRE exigida en /auth/token (incondicional desde 0.4.6).
+    # Este flag ya no activa la verificación; solo controla si se aplica la
+    # indulgencia de verification_grace_days (False = bloqueo inmediato 403).
     enforce_email_verification: bool = False
-    # Días de gracia para usuarios no verificados; None = bloqueo inmediato (403)
+    # Días de gracia para usuarios no verificados; None = bloqueo inmediato (403).
+    # Una línea vacía en .env (VERIFICATION_GRACE_DAYS=) se mapea a None.
     verification_grace_days: int | None = 10
+
+    @field_validator("enforce_email_verification", mode="before")
+    @classmethod
+    def _empty_enforce_is_false(cls, v: object) -> object:
+        """Una línea vacía en .env (ENFORCE_EMAIL_VERIFICATION=) no debe
+        crashear: se interpreta como False (fail-closed → bloqueo inmediato)."""
+        if v == "":
+            return False
+        return v
+
+    @field_validator("verification_grace_days", mode="before")
+    @classmethod
+    def _empty_grace_is_none(cls, v: object) -> object:
+        """Una línea vacía en .env (VERIFICATION_GRACE_DAYS=) no debe crashear:
+        se interpreta como None (sin indulgencia → bloqueo inmediato)."""
+        if v == "":
+            return None
+        return v
 
     model_config = SettingsConfigDict(
         env_file=DOTENV_PATH,
