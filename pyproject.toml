@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "oauth2fast-fastapi"
-version = "0.4.5"
+dynamic = ["version"]
 description = "Fast and secure OAuth2 authentication module for FastAPI with email verification"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -72,6 +72,10 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["oauth2fast_fastapi*"]
+
+# Single source of truth for the version: __version__.py
+[tool.setuptools.dynamic]
+version = {attr = "oauth2fast_fastapi.__version__.__version__"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

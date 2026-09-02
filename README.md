@@ -2,6 +2,8 @@
 
 🔐 Fast and secure OAuth2 authentication module for FastAPI with email verification and JWT tokens
 
+> 📖 **Conventions reference**: this package follows the [2fast-handbook](https://github.com/AngelDanielSanchezCastillo/2fast-handbook) for ecosystem conventions (structure, versioning, README, commits, release).
+
 > [!WARNING]
 > **Internal Use Notice**
 > 
