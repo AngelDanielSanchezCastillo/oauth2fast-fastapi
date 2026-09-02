@@ -29,13 +29,13 @@ classifiers = [
 dependencies = [
     # External modules (include their own dependencies)
     # Databases
-    "pgsqlasync2fast-fastapi>=0.3.0",
+    "pgsqlasync2fast-fastapi>=0.3.1",
     # Mailing
-    "mailing2fast-fastapi>=0.2.2",
+    "mailing2fast-fastapi>=0.2.3",
     # Logging
-    "log2fast-fastapi>=0.1.2",
+    "log2fast-fastapi>=0.1.3",
     # Tools
-    "tools2fast-fastapi>=0.3.11",
+    "tools2fast-fastapi>=0.3.12",
     # JWT and authentication
     "python-jose[cryptography]>=3.3.0",
     "passlib[argon2]>=1.7.4",
