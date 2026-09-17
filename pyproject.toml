@@ -28,8 +28,12 @@ classifiers = [
 
 dependencies = [
     # External modules (include their own dependencies)
-    # Databases
-    "pgsqlasync2fast-fastapi>=0.3.1",
+    # Databases. Exact pin: 0.5.0 ships the shared Alembic runner/env/registry
+    # that the oauth chain depends on (alembic-2fast change).
+    "pgsqlasync2fast-fastapi==0.5.0",
+    # Exact pin per the alembic-2fast migration change: deliberate re-pins
+    # require a version bump and a full test run. Never use a range here.
+    "alembic==1.20.0",
     # Mailing
     "mailing2fast-fastapi>=0.2.3",
     # Logging
@@ -80,6 +84,9 @@ version = {attr = "oauth2fast_fastapi.__version__.__version__"}
 [tool.setuptools.package-data]
 oauth2fast_fastapi = [
     "skills/*.md",
+    # Package-owned Alembic chain (alembic-2fast): shipped in the wheel and
+    # resolved from the installed release, never a checkout.
+    "migrations/**/*.py",
 ]
 
 [tool.pytest.ini_options]
