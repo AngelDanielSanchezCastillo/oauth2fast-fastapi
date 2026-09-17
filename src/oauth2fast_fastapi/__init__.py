@@ -2,6 +2,9 @@
 OAuth2Fast-FastAPI - Fast and secure OAuth2 authentication for FastAPI
 """
 
+# Register the oauth Alembic chain under the "auth" lane at import time
+# (mirrors the register_seeder idiom; alembic-2fast change).
+from . import migrations as _migrations  # noqa: F401
 from .__version__ import __version__
 from .database import (
     get_db_engine,
@@ -15,10 +18,6 @@ from .models.user_model import User
 from .routers.base_router import router
 from .schemas.user_schema import UserCreate, UserRead
 from .settings import settings
-
-# Register the oauth Alembic chain under the "auth" lane at import time
-# (mirrors the register_seeder idiom; alembic-2fast change).
-from . import migrations as _migrations  # noqa: F401
 
 __all__ = [
     "__version__",

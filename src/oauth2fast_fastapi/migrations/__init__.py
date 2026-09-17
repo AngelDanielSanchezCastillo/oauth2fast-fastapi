@@ -14,8 +14,9 @@ chain spec under the ``"auth"`` lane. The chain directory
 the INSTALLED release via alembic-native ``pkg:path`` resource strings.
 """
 
-from oauth2fast_fastapi.models.bases import metadata
 from pgsqlasync2fast_fastapi import ChainSpec, register_chain
+
+from oauth2fast_fastapi.models.bases import metadata
 
 #: Tables this chain owns (design D9 ownership filter): exactly ``users``.
 OAUTH_OWNED_TABLES = frozenset({"users"})

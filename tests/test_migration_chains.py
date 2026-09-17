@@ -90,7 +90,8 @@ def test_baseline_0001_initial_parseable_by_script_directory():
     filepath = rev.path
     assert filepath.endswith("0001_initial.py"), filepath
 
-    text = open(filepath).read()
+    with open(filepath) as fh:
+        text = fh.read()
     assert "op.create_table('users'" in text
     # Alembic renders third-party types module-qualified without importing the
     # module (alembic 1.20.0 _repr_type); the baseline must carry the import.
