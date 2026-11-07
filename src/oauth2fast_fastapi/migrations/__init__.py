@@ -16,10 +16,15 @@ the INSTALLED release via alembic-native ``pkg:path`` resource strings.
 
 from pgsqlasync2fast_fastapi import ChainSpec, register_chain
 
+# Import the model for its side effect: registering the table on the shared
+# auth ``metadata`` so autogenerate can see it.
+from oauth2fast_fastapi.models import (
+    refresh_token_model as _refresh_model,  # noqa: F401
+)
 from oauth2fast_fastapi.models.bases import metadata
 
-#: Tables this chain owns (design D9 ownership filter): exactly ``users``.
-OAUTH_OWNED_TABLES = frozenset({"users"})
+#: Tables this chain owns (design D9 ownership filter).
+OAUTH_OWNED_TABLES = frozenset({"users", "oauth__refresh_tokens"})
 
 oauth_chain = ChainSpec(
     package="oauth2fast_fastapi",

@@ -18,7 +18,15 @@ class Settings(BaseSettings):
     # JWT Configuration
     secret_key: SecretStr  # Required - no default value
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_minutes: int = 10080  # 7 days
+    # Refresh cookie flags. Secure defaults to True; set
+    # REFRESH_COOKIE_SECURE=false for plain-HTTP staging/dev environments.
+    refresh_cookie_secure: bool = True
+    refresh_cookie_samesite: str = "strict"
+    # Optional Redis cache for refresh tokens (PostgreSQL is always the source
+    # of truth). Empty/unset disables the cache.
+    redis_url: str | None = None
 
     # Email verification: SIEMPRE exigida en /auth/token (incondicional desde 0.4.6).
     # Este flag ya no activa la verificación; solo controla si se aplica la

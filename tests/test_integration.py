@@ -7,22 +7,21 @@ with the OAuth2Fast authentication system.
 
 import pytest
 from fastapi import FastAPI
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+
+# Import from external modules
+from pgsqlasync2fast_fastapi import get_manager
 
 # Import from oauth2fast_fastapi
 from oauth2fast_fastapi import (
-    User,
     AuthModel,
+    User,
     get_current_user,
     router,
     settings,
     shutdown_database,
     startup_database,
 )
-
-# Import from external modules
-from pgsqlasync2fast_fastapi import get_manager
-from httpx import ASGITransport
 
 
 @pytest.fixture(scope="module")
@@ -31,11 +30,13 @@ def app():
     test_app = FastAPI()
     # Router already has a prefix configured in settings (default: /auth)
     test_app.include_router(router, tags=["Authentication"])
-    
+
     @test_app.get("/protected")
-    async def protected_route(current_user: User = pytest.importorskip("fastapi").Depends(get_current_user)):
+    async def protected_route(
+        current_user: User = pytest.importorskip("fastapi").Depends(get_current_user),
+    ):
         return {"message": f"Hello {current_user.email}!"}
-    
+
     return test_app
 
 
@@ -44,23 +45,27 @@ async def setup_database():
     """Setup database for testing."""
     # Initialize database connections
     await startup_database()
-    
+
     # Get engine for auth connection using manager directly
     manager = get_manager()
     engine = manager.get_engine("auth")
-    
+
     # Create tables using AuthModel metadata directly
     # Note: AuthModel uses a custom metadata instance to isolate auth tables
     async with engine.begin() as conn:
         await conn.run_sync(AuthModel.metadata.create_all)
-    
+
     yield
-    
+
     # Cleanup: Drop tables with CASCADE to handle dependent tables created by tests
     async with engine.begin() as conn:
         for table in reversed(AuthModel.metadata.sorted_tables):
-            await conn.execute(pytest.importorskip("sqlalchemy").text(f"DROP TABLE IF EXISTS {table.name} CASCADE"))
-    
+            await conn.execute(
+                pytest.importorskip("sqlalchemy").text(
+                    f"DROP TABLE IF EXISTS {table.name} CASCADE"
+                )
+            )
+
     # Shutdown database connections
     await shutdown_database()
 
@@ -78,7 +83,7 @@ async def test_database_connection(setup_database):
     """Test that database connection works."""
     manager = get_manager()
     engine = manager.get_engine("auth")
-    
+
     async with engine.connect() as conn:
         result = await conn.execute(pytest.importorskip("sqlalchemy").text("SELECT 1"))
         assert result.scalar() == 1
@@ -88,17 +93,17 @@ async def test_database_connection(setup_database):
 async def test_user_table_created(setup_database):
     """Test that User table is created in database."""
     from sqlalchemy import inspect
-    
+
     manager = get_manager()
     engine = manager.get_engine("auth")
-    
+
     async with engine.connect() as conn:
         # Check if user table exists
         def check_table(connection):
             inspector = inspect(connection)
             tables = inspector.get_table_names()
             return "users" in tables
-        
+
         table_exists = await conn.run_sync(check_table)
         assert table_exists, "User table was not created"
 
@@ -247,13 +252,13 @@ async def test_email_verification_token_generation():
         create_verification_token,
         verify_verification_token,
     )
-    
+
     email = "verify@example.com"
     token = create_verification_token(email)
-    
+
     assert token is not None
     assert isinstance(token, str)
-    
+
     # Verify token
     decoded_email = verify_verification_token(token)
     assert decoded_email == email

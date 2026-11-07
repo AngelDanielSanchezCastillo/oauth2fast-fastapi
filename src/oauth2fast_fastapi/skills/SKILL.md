@@ -4,13 +4,13 @@ description: "Trigger: working on or with oauth2fast-fastapi. Stateless JWT auth
 license: MIT
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "1.0"
+  version: "2.0"
 ---
 
 ## Purpose
 
-Stateless JWT auth: OAuth2 **password grant** (`POST /token`) + email
-verification. No social providers, no sessions, no refresh tokens. Downstream
+OAuth2 **password grant** (`POST /token`), email verification and refresh
+tokens (rotation + family reuse detection). No social providers. Downstream
 base for tenants2fast/permissions2fast (`AuthModel`, `User`, deps, JWT utils).
 
 ## Import quirk
@@ -21,7 +21,7 @@ base for tenants2fast/permissions2fast (`AuthModel`, `User`, deps, JWT utils).
 
 ## Public API
 
-- `router` — prefix baked from `AUTH_URL_PREFIX` (default `/auth`): include WITHOUT an extra prefix. Endpoints: `POST /auth/users/`, `GET /auth/users/` (**unprotected, lists all users — testing only**), `GET /auth/users/by-email/{email}`, `POST /auth/confirm-email`, `POST /auth/resend-verification`, `POST /auth/token`.
+- `router` — prefix baked from `AUTH_URL_PREFIX` (default `/auth`): include WITHOUT an extra prefix. Endpoints: `POST /auth/users/`, `GET /auth/users/` (**unprotected, lists all users — testing only**), `GET /auth/users/by-email/{email}`, `POST /auth/confirm-email`, `POST /auth/resend-verification`, `POST /auth/token`, `POST /auth/token/refresh`, `POST /auth/logout`, `POST /auth/logout/all`.
 - Deps: `get_current_user` (JWT → email → DB), `get_current_verified_user` (403 if unverified).
 - Utils: `create_access_token`, `verify_token`, `hash_password` (Argon2), `create_verification_token` / `verify_verification_token`.
 - `get_auth_session` = partial of `pgsqlasync2fast_fastapi.get_db_session` bound to connection **"auth"** (hard-coded in 5+ places; configure `DB_CONNECTIONS__AUTH__*`).
@@ -41,19 +41,31 @@ base for tenants2fast/permissions2fast (`AuthModel`, `User`, deps, JWT utils).
 ## Settings
 
 Top-level env (NOT `AUTH_`-prefixed): `SECRET_KEY` (**required**, no default),
-`ALGORITHM` (HS256), `ACCESS_TOKEN_EXPIRE_MINUTES` (60), `AUTH_URL_PREFIX` (auth),
-`FRONTEND_URL`, `ENFORCE_EMAIL_VERIFICATION` (False), `VERIFICATION_GRACE_DAYS`
-(10; empty → None). Reads `.env` from **process CWD**; empty values fail closed.
+`ALGORITHM` (HS256), `ACCESS_TOKEN_EXPIRE_MINUTES` (15),
+`REFRESH_TOKEN_EXPIRE_MINUTES` (10080), `REFRESH_COOKIE_SECURE` (True),
+`REFRESH_COOKIE_SAMESITE` (strict), `REDIS_URL` (optional),
+`AUTH_URL_PREFIX` (auth), `FRONTEND_URL`, `ENFORCE_EMAIL_VERIFICATION` (False),
+`VERIFICATION_GRACE_DAYS` (10; empty → None). Reads `.env` from **process CWD**;
+empty values fail closed.
 DB/mail vars belong to pgsqlasync2fast/mailing2fast (`DB_CONNECTIONS__AUTH__*`,
 `MAIL_SMTP_ACCOUNTS__AUTH__*`).
 
 ## Non-obvious
 
-- No refresh/revocation/logout — tokens valid until `exp`.
+- Refresh tokens: PostgreSQL (`oauth__refresh_tokens`) is the source of truth;
+  Redis is an optional cache. Rotation keeps `family_id`; replaying a rotated
+  token revokes the whole family (`TokenInvalid`). Raw tokens are never stored,
+  only SHA-256 hashes.
+- Refresh cookie: httpOnly, `Path=/auth`, `SameSite=strict`, `Secure` defaults
+  to True (disable with `REFRESH_COOKIE_SECURE=false` for HTTP).
+- Auth errors: 401 uses `error.type` (`TokenMissing`/`TokenExpired`/`TokenInvalid`)
+  plus RFC 6750 `WWW-Authenticate`; 403 uses `EmailNotVerified`. Apps must call
+  `install_auth_error_handler(app)` from tools2fast for dependency failures.
 - Silent email failures: registration succeeds even if the verification email fails to send (message printed).
 - Registration defaults `is_verified=False` → login blocked until verified.
 - `GET /auth/users/` needs NO auth — never treat it as a protected listing.
-- Wiring: `startup_database()` → `get_db_engine("auth")` → `AuthModel.metadata.create_all` (no Alembic).
+- Wiring: `startup_database()` → `get_db_engine("auth")` → Alembic chain
+  `oauth` (tables `users` + `oauth__refresh_tokens`).
 
 ## Conventions
 

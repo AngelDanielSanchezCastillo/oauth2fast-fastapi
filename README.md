@@ -56,7 +56,13 @@ Create a `.env` file in your project root:
 # Required JWT Configuration
 SECRET_KEY=your-super-secret-key-change-this-in-production
 ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+
+# Refresh tokens (httpOnly cookie by default)
+REFRESH_TOKEN_EXPIRE_MINUTES=10080
+REFRESH_COOKIE_SECURE=true
+REFRESH_COOKIE_SAMESITE=strict
+# REDIS_URL=redis://localhost:6379/0
 
 # Database Configuration
 DB_DEFAULT_CONNECTION=auth
@@ -213,7 +219,31 @@ All configuration is done via environment variables with nested delimiter `__`.
 ### JWT Settings (Required)
 - `SECRET_KEY` - **Required**: Secret key for JWT signing
 - `ALGORITHM` - Default: `"HS256"`: JWT algorithm
-- `ACCESS_TOKEN_EXPIRE_MINUTES` - Default: `60`: Token expiration time in minutes
+- `ACCESS_TOKEN_EXPIRE_MINUTES` - Default: `15`: Access token expiration in minutes
+- `REFRESH_TOKEN_EXPIRE_MINUTES` - Default: `10080` (7 days): Refresh token expiration in minutes
+- `REFRESH_COOKIE_SECURE` - Default: `true`: Set `false` only for plain-HTTP dev/staging
+- `REFRESH_COOKIE_SAMESITE` - Default: `"strict"`: Refresh cookie SameSite policy
+- `REDIS_URL` - Optional: enables the Redis cache for refresh tokens (PostgreSQL is always the source of truth)
+
+### Auth error contract
+Authentication failures return HTTP 401 with an `error.type` discriminator
+(`TokenMissing`, `TokenExpired`, `TokenInvalid`) and an RFC 6750
+`WWW-Authenticate` header. Authorization failures return HTTP 403 with
+`EmailNotVerified`. Install the handler once at startup so dependency failures
+use the project envelope:
+
+```python
+from tools2fast_fastapi import install_auth_error_handler
+install_auth_error_handler(app)
+```
+
+### Refresh tokens
+- `POST /auth/token` returns `access_token`, `refresh_token` and `expires_in`;
+  the refresh token is also set in an httpOnly cookie scoped to `/auth`.
+- `POST /auth/token/refresh` rotates the refresh token (family tracking) and
+  issues a new access token. Replaying a rotated token revokes the family.
+- `POST /auth/logout` revokes the current device; `POST /auth/logout/all`
+  revokes every session of the authenticated user.
 
 ### Database Settings
 - `AUTH_DB__USERNAME` - Database username
