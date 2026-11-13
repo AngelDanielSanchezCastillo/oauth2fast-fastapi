@@ -87,6 +87,7 @@ oauth2fast_fastapi = [
     # Package-owned Alembic chain (alembic-2fast): shipped in the wheel and
     # resolved from the installed release, never a checkout.
     "migrations/**/*.py",
+    "migrations/**/*.mako",
 ]
 
 [tool.pytest.ini_options]

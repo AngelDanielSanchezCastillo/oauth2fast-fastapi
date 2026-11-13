@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from pgsqlasync2fast_fastapi import get_manager
 from sqlalchemy import text
 
 from oauth2fast_fastapi import (
@@ -36,7 +37,6 @@ from oauth2fast_fastapi import (
 from oauth2fast_fastapi.routers.base_router import _days_since_creation
 from oauth2fast_fastapi.settings import Settings
 from oauth2fast_fastapi.utils.verification_utils import create_verification_token
-from pgsqlasync2fast_fastapi import get_manager
 
 PASSWORD = "SecurePassword123"
 

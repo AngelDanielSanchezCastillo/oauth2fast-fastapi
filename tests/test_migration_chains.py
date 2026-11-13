@@ -41,12 +41,7 @@ def _oauth_spec():
 
 
 def test_chain_shim_exists_and_dispatches_to_shared_env():
-    shim = (
-        resources.files("oauth2fast_fastapi")
-        / "migrations"
-        / "oauth"
-        / "env.py"
-    )
+    shim = resources.files("oauth2fast_fastapi") / "migrations" / "oauth" / "env.py"
     assert shim.is_file()
     text = shim.read_text()
     assert "pgsqlasync2fast_fastapi.migrations" in text
@@ -60,7 +55,7 @@ def test_oauth_chain_registered_in_auth_lane_with_contract():
     assert spec.package == "oauth2fast_fastapi"
     assert spec.script_path == "migrations/oauth"
     assert spec.version_table == "alembic_version_oauth"
-    assert spec.owned_tables == frozenset({"users"})
+    assert spec.owned_tables == frozenset({"users", "oauth__refresh_tokens"})
 
 
 def test_oauth_chain_is_first_in_auth_lane():
@@ -82,12 +77,10 @@ def test_baseline_0001_initial_parseable_by_script_directory():
     cfg.set_main_option("script_location", SCRIPT_LOCATION)
     script = ScriptDirectory.from_config(cfg)
 
-    head = script.get_current_head()
-    assert head == "0001"
-    rev = script.get_revision(head)
-    assert rev.down_revision is None  # single-baseline chain
+    baseline = script.get_revision("0001")
+    assert baseline.down_revision is None  # single-baseline chain
 
-    filepath = rev.path
+    filepath = baseline.path
     assert filepath.endswith("0001_initial.py"), filepath
 
     with open(filepath) as fh:
@@ -101,15 +94,29 @@ def test_baseline_0001_initial_parseable_by_script_directory():
     assert "op.create_table('permissions'" not in text
 
 
+def test_refresh_tokens_revision_chains_from_baseline():
+    cfg = Config()
+    cfg.set_main_option("script_location", SCRIPT_LOCATION)
+    script = ScriptDirectory.from_config(cfg)
+
+    head = script.get_current_head()
+    rev = script.get_revision(head)
+    assert rev is not None
+    assert rev.down_revision == "0001"
+
+    with open(rev.path) as fh:
+        text = fh.read()
+    assert "op.create_table('oauth__refresh_tokens'" in text
+    assert "import sqlmodel" in text
+
+
 def test_chain_upgrades_to_head_in_offline_mode():
     # Executes the chain shim -> shared runner env offline path: the whole
     # chain (env + versions) renders SQL without any database. Proves the
     # shim imports resolve and the baseline is loadable by alembic.
     cfg = Config()
     cfg.set_main_option("script_location", SCRIPT_LOCATION)
-    cfg.set_main_option(
-        "sqlalchemy.url", "postgresql+asyncpg://u:p@h:5432/authdb"
-    )
+    cfg.set_main_option("sqlalchemy.url", "postgresql+asyncpg://u:p@h:5432/authdb")
     cfg.set_main_option("version_table", "alembic_version_oauth")
     cfg.attributes["target_metadata"] = _oauth_spec().target_metadata
 

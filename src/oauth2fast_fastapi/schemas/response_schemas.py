@@ -12,14 +12,19 @@ from tools2fast_fastapi import ErrorDetail
 
 # ============ Token/Auth Responses ============
 
+
 class TokenResponse(BaseModel):
     """Response for token data."""
+
     access_token: str
     token_type: str = "bearer"
+    refresh_token: str | None = None
+    expires_in: int | None = None
 
 
 class TokenSuccessResponse(BaseModel):
     """Successful token response."""
+
     success: Literal[True] = True
     message: str = "Éxito"
     token: TokenResponse
@@ -27,6 +32,7 @@ class TokenSuccessResponse(BaseModel):
 
 class TokenErrorResponse(BaseModel):
     """Error response for token operations."""
+
     success: Literal[False] = False
     error_type: Literal["controlled"] = "controlled"
     message: str
@@ -35,6 +41,7 @@ class TokenErrorResponse(BaseModel):
 
 class TokenUnexpectedErrorResponse(BaseModel):
     """Unexpected error response for token operations."""
+
     success: Literal[False] = False
     error_type: Literal["unexpected"] = "unexpected"
     message: str = "Ha ocurrido un error"
@@ -43,8 +50,10 @@ class TokenUnexpectedErrorResponse(BaseModel):
 
 # ============ User Responses ============
 
+
 class UserResponse(BaseModel):
     """Response for user data."""
+
     id: int
     email: str
     name: str
@@ -55,6 +64,7 @@ class UserResponse(BaseModel):
 
 class UserCreatedResponse(BaseModel):
     """Successful user creation response."""
+
     success: Literal[True] = True
     message: str = "Usuario creado exitosamente"
     user: UserResponse
@@ -62,6 +72,7 @@ class UserCreatedResponse(BaseModel):
 
 class UserListResponse(BaseModel):
     """Successful user list response."""
+
     success: Literal[True] = True
     message: str = "Éxito"
     users: list[UserResponse]
@@ -70,6 +81,7 @@ class UserListResponse(BaseModel):
 
 class UserSingleResponse(BaseModel):
     """Successful single user response."""
+
     success: Literal[True] = True
     message: str = "Éxito"
     user: UserResponse
@@ -77,6 +89,7 @@ class UserSingleResponse(BaseModel):
 
 class UserErrorResponse(BaseModel):
     """Error response for user operations."""
+
     success: Literal[False] = False
     error_type: Literal["controlled"] = "controlled"
     message: str
@@ -85,6 +98,7 @@ class UserErrorResponse(BaseModel):
 
 class UserUnexpectedErrorResponse(BaseModel):
     """Unexpected error response for user operations."""
+
     success: Literal[False] = False
     error_type: Literal["unexpected"] = "unexpected"
     message: str = "Ha ocurrido un error"
@@ -93,14 +107,17 @@ class UserUnexpectedErrorResponse(BaseModel):
 
 # ============ Verification Responses ============
 
+
 class VerificationResponseModel(BaseModel):
     """Response for verification operations."""
+
     message: str
     success: bool = True
 
 
 class EmailVerificationSuccessResponse(BaseModel):
     """Successful email verification response."""
+
     success: Literal[True] = True
     message: str
     data: VerificationResponseModel | None = None
@@ -108,6 +125,7 @@ class EmailVerificationSuccessResponse(BaseModel):
 
 class EmailVerificationErrorResponse(BaseModel):
     """Error response for email verification."""
+
     success: Literal[False] = False
     error_type: Literal["controlled"] = "controlled"
     message: str
@@ -116,6 +134,7 @@ class EmailVerificationErrorResponse(BaseModel):
 
 class EmailVerificationUnexpectedErrorResponse(BaseModel):
     """Unexpected error response for email verification."""
+
     success: Literal[False] = False
     error_type: Literal["unexpected"] = "unexpected"
     message: str = "Ha ocurrido un error"
@@ -124,6 +143,7 @@ class EmailVerificationUnexpectedErrorResponse(BaseModel):
 
 class ResendVerificationSuccessResponse(BaseModel):
     """Successful resend verification response."""
+
     success: Literal[True] = True
     message: str
     data: VerificationResponseModel | None = None
@@ -131,6 +151,7 @@ class ResendVerificationSuccessResponse(BaseModel):
 
 class ResendVerificationErrorResponse(BaseModel):
     """Error response for resend verification."""
+
     success: Literal[False] = False
     error_type: Literal["controlled"] = "controlled"
     message: str
@@ -139,6 +160,7 @@ class ResendVerificationErrorResponse(BaseModel):
 
 class ResendVerificationUnexpectedErrorResponse(BaseModel):
     """Unexpected error response for resend verification."""
+
     success: Literal[False] = False
     error_type: Literal["unexpected"] = "unexpected"
     message: str = "Ha ocurrido un error"
