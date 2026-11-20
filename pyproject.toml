@@ -30,7 +30,7 @@ dependencies = [
     # External modules (include their own dependencies)
     # Databases. Exact pin: 0.5.0 ships the shared Alembic runner/env/registry
     # that the oauth chain depends on (alembic-2fast change).
-    "pgsqlasync2fast-fastapi==0.5.1",
+    "pgsqlasync2fast-fastapi>=0.5.2",
     # Exact pin per the alembic-2fast migration change: deliberate re-pins
     # require a version bump and a full test run. Never use a range here.
     "alembic==1.20.0",
