@@ -16,8 +16,9 @@ from pgsqlasync2fast_fastapi import get_manager
 from oauth2fast_fastapi import (
     AuthModel,
     User,
+    admin_router,
     get_current_user,
-    router,
+    public_router,
     settings,
     shutdown_database,
     startup_database,
@@ -28,8 +29,9 @@ from oauth2fast_fastapi import (
 def app():
     """Create FastAPI app for testing."""
     test_app = FastAPI()
-    # Router already has a prefix configured in settings (default: /auth)
-    test_app.include_router(router, tags=["Authentication"])
+    # Routers already have a prefix configured in settings (default: /auth)
+    test_app.include_router(public_router, tags=["Authentication"])
+    test_app.include_router(admin_router, tags=["Authentication Admin"])
 
     @test_app.get("/protected")
     async def protected_route(

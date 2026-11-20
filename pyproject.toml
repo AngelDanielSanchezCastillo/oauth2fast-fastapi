@@ -46,6 +46,8 @@ dependencies = [
     "argon2-cffi>=25.0.0",  # Required for Argon2 password hashing
     # Form data handling
     "python-multipart>=0.0.6",
+    # SQLModel: required for UTCDateTime and AutoString in migrations
+    "sqlmodel>=0.0.50",
 ]
 
 [dependency-groups]

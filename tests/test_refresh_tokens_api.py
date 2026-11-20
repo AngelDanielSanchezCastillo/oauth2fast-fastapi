@@ -16,7 +16,7 @@ from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 from tools2fast_fastapi import install_auth_error_handler
 
-from oauth2fast_fastapi import router
+from oauth2fast_fastapi import admin_router, public_router
 
 COOKIE_NAME = "metal_erp_refresh_token"
 PASSWORD = "SecurePassword123"
@@ -24,10 +24,11 @@ PASSWORD = "SecurePassword123"
 
 @pytest.fixture
 async def api_client(auth_engine):
-    """FastAPI app with the auth router and the auth error handler."""
+    """FastAPI app with the auth routers and the auth error handler."""
     app = FastAPI()
     install_auth_error_handler(app)
-    app.include_router(router, tags=["Authentication"])
+    app.include_router(public_router, tags=["Authentication"])
+    app.include_router(admin_router, tags=["Authentication Admin"])
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
