@@ -29,12 +29,13 @@ from sqlalchemy import text
 
 from oauth2fast_fastapi import (
     AuthModel,
-    router,
+    admin_router,
+    public_router,
     settings,
     shutdown_database,
     startup_database,
 )
-from oauth2fast_fastapi.routers.base_router import _days_since_creation
+from oauth2fast_fastapi.routers.public_router import _days_since_creation
 from oauth2fast_fastapi.settings import Settings
 from oauth2fast_fastapi.utils.verification_utils import create_verification_token
 
@@ -45,7 +46,8 @@ PASSWORD = "SecurePassword123"
 def app():
     """Crea la aplicación FastAPI para testing."""
     test_app = FastAPI()
-    test_app.include_router(router, tags=["Authentication"])
+    test_app.include_router(public_router, tags=["Authentication"])
+    test_app.include_router(admin_router, tags=["Authentication Admin"])
     return test_app
 
 

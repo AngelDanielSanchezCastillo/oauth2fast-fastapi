@@ -100,45 +100,64 @@ AUTH_URL_PREFIX=auth
 
 ```python
 from fastapi import FastAPI, Depends
-from oauth2fast_fastapi import router, engine, get_current_user, User
+from oauth2fast_fastapi import public_router, admin_router, get_current_user, User, startup_database
+from permissions2fast_fastapi import has_role
 from sqlmodel import SQLModel
 
 app = FastAPI()
 
-# Include authentication router
-app.include_router(router, prefix="/auth", tags=["Authentication"])
+# Public endpoints: token, register, verify-email, logout
+app.include_router(public_router)
+
+# Admin endpoints: list users, get user by email
+# Inject RBAC with permissions2fast
+app.include_router(admin_router, dependencies=[Depends(has_role("admin"))])
 
 @app.on_event("startup")
 async def startup():
-    # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    await startup_database()
 
 @app.get("/profile")
 async def get_profile(current_user: User = Depends(get_current_user)):
     return {
         "email": current_user.email,
-        "name": f"{current_user.first_name} {current_user.last_name}",
+        "name": current_user.name,
         "verified": current_user.is_verified
     }
 ```
 
-### 3. Authentication Flow
+### 3. Bootstrap an Admin User
+
+**Create admin user (verified, no roles assigned):**
+```bash
+python -m oauth2fast_fastapi.scripts.create_admin \
+    --email admin@example.com \
+    --password 'StrongPassword123' \
+    --name 'Admin User'
+```
+
+**Assign admin role:**
+```bash
+python -m permissions2fast_fastapi.scripts.assign_role \
+    --email admin@example.com \
+    --role admin
+```
+
+### 4. Authentication Flow
 
 **Register a new user:**
 ```bash
-POST /auth/users/register
+POST /auth/users/
 {
   "email": "user@example.com",
   "password": "SecurePassword123",
-  "first_name": "John",
-  "last_name": "Doe"
+  "name": "John Doe"
 }
 ```
 
 **Verify email:**
 ```bash
-POST /auth/users/verify-email
+POST /auth/confirm-email
 {
   "token": "verification-token-from-email"
 }
@@ -156,7 +175,9 @@ Response:
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
+  "token_type": "bearer",
+  "refresh_token": "...",
+  "expires_in": 900
 }
 ```
 
@@ -203,14 +224,26 @@ class CustomUser(BaseUser, table=True):
 
 ## Available Endpoints
 
-The authentication router provides the following endpoints:
+### `public_router` — Public endpoints (no admin role required)
 
-- `POST /auth/users/register` - Register a new user
-- `POST /auth/users/verify-email` - Verify email with token
-- `POST /auth/users/resend-verification` - Resend verification email
-- `POST /auth/token` - Login and get JWT token
-- `GET /auth/users/me` - Get current user profile
-- `PUT /auth/users/me` - Update current user profile
+- `POST /auth/token` - Login and get access + refresh tokens
+- `POST /auth/token/refresh` - Refresh access token (cookie or body)
+- `POST /auth/logout` - Revoke current device's refresh token
+- `POST /auth/logout/all` - Revoke all devices' refresh tokens
+- `POST /auth/users/` - Register a new user (self-registration)
+- `POST /auth/confirm-email` - Verify email with token
+- `POST /auth/resend-verification` - Resend verification email
+
+### `admin_router` — Admin endpoints (inject RBAC when mounting)
+
+- `GET /auth/users/` - List all users
+- `GET /auth/users/by-email/{email}` - Get user by email
+
+> **Note**: The `admin_router` does NOT include RBAC. Inject it when mounting:
+> ```python
+> from permissions2fast_fastapi import has_role
+> app.include_router(admin_router, dependencies=[Depends(has_role("admin"))])
+> ```
 
 ## Configuration Reference
 

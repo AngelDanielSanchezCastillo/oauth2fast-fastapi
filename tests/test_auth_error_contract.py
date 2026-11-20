@@ -28,8 +28,9 @@ from tools2fast_fastapi import install_auth_error_handler
 from oauth2fast_fastapi import (
     AuthModel,
     User,
+    admin_router,
     get_current_user,
-    router,
+    public_router,
     shutdown_database,
     startup_database,
 )
@@ -38,10 +39,11 @@ from oauth2fast_fastapi.utils.token_utils import create_access_token
 
 @pytest.fixture(scope="module")
 def app():
-    """Create a FastAPI app with the auth router and a protected route."""
+    """Create a FastAPI app with the auth routers and a protected route."""
     test_app = FastAPI()
     install_auth_error_handler(test_app)
-    test_app.include_router(router, tags=["Authentication"])
+    test_app.include_router(public_router, tags=["Authentication"])
+    test_app.include_router(admin_router, tags=["Authentication Admin"])
 
     @test_app.get("/protected")
     async def protected_route(

@@ -21,7 +21,9 @@ base for tenants2fast/permissions2fast (`AuthModel`, `User`, deps, JWT utils).
 
 ## Public API
 
-- `router` — prefix baked from `AUTH_URL_PREFIX` (default `/auth`): include WITHOUT an extra prefix. Endpoints: `POST /auth/users/`, `GET /auth/users/` (**unprotected, lists all users — testing only**), `GET /auth/users/by-email/{email}`, `POST /auth/confirm-email`, `POST /auth/resend-verification`, `POST /auth/token`, `POST /auth/token/refresh`, `POST /auth/logout`, `POST /auth/logout/all`.
+- `public_router` — prefix baked from `AUTH_URL_PREFIX` (default `/auth`): include WITHOUT an extra prefix. Public endpoints: `POST /auth/token`, `POST /auth/token/refresh`, `POST /auth/logout`, `POST /auth/logout/all`, `POST /auth/users/` (self-registration), `POST /auth/confirm-email`, `POST /auth/resend-verification`.
+- `admin_router` — prefix baked from `AUTH_URL_PREFIX`: include WITHOUT an extra prefix. Admin endpoints: `GET /auth/users/`, `GET /auth/users/by-email/{email}`. **No RBAC embedded** — inject via `dependencies=[Depends(has_role("admin"))]`.
+- ~~`router`~~ (removed in 0.7.0) — use `public_router` + `admin_router` instead.
 - Deps: `get_current_user` (JWT → email → DB), `get_current_verified_user` (403 if unverified).
 - Utils: `create_access_token`, `verify_token`, `hash_password` (Argon2), `create_verification_token` / `verify_verification_token`.
 - `get_auth_session` = partial of `pgsqlasync2fast_fastapi.get_db_session` bound to connection **"auth"** (hard-coded in 5+ places; configure `DB_CONNECTIONS__AUTH__*`).
