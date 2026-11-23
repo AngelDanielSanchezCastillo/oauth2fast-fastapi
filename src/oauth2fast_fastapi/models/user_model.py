@@ -1,11 +1,11 @@
 from sqlmodel import Field
 
-from .bases import AuthModel
+from .bases import AuthSoftDeleteModel
 
 
 # Database model for User
 # This model represents a user registered in the database
-class User(AuthModel, table=True):
+class User(AuthSoftDeleteModel, table=True):
     __tablename__ = "users"
 
     name: str = Field(index=True)

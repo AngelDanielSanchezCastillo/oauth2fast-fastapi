@@ -23,6 +23,8 @@
 - 🎨 **Customizable**: Extend the User model with your own fields
 - 📝 **Type-Safe Configuration**: Pydantic settings with environment variables
 - 🔄 **Email Templates**: Jinja2 templates for verification and welcome emails
+- 🔢 **UUID v7 Primary Keys**: Time-ordered UUIDs for collision-free, sortable identifiers
+- 🗑️ **Soft Delete**: Logical deletion with audit trail (deleted_at, deleted_by)
 
 ## Installation
 

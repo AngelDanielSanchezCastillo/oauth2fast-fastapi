@@ -41,7 +41,7 @@ def _from_cache(data: dict) -> RefreshToken:
 async def create_refresh_token_record(
     session: AsyncSession,
     *,
-    user_id: int,
+    user_id: UUID,
     family_id: UUID | None = None,
     device_info: str | None = None,
     expires_delta: timedelta | None = None,
@@ -154,7 +154,7 @@ async def revoke_family(session: AsyncSession, family_id: UUID) -> None:
         await refresh_cache.invalidate(record.token_hash)
 
 
-async def revoke_all_for_user(session: AsyncSession, user_id: int) -> None:
+async def revoke_all_for_user(session: AsyncSession, user_id: UUID) -> None:
     """Revoke every still-active token of a user (global logout)."""
     result = await session.exec(
         select(RefreshToken).where(

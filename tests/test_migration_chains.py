@@ -99,8 +99,8 @@ def test_refresh_tokens_revision_chains_from_baseline():
     cfg.set_main_option("script_location", SCRIPT_LOCATION)
     script = ScriptDirectory.from_config(cfg)
 
-    head = script.get_current_head()
-    rev = script.get_revision(head)
+    # The refresh_tokens revision chains from the 0001 baseline
+    rev = script.get_revision("45b786644a86")
     assert rev is not None
     assert rev.down_revision == "0001"
 
@@ -108,6 +108,31 @@ def test_refresh_tokens_revision_chains_from_baseline():
         text = fh.read()
     assert "op.create_table('oauth__refresh_tokens'" in text
     assert "import sqlmodel" in text
+
+
+def test_uuid_soft_delete_revision_chains_from_refresh_tokens():
+    """The UUID+soft-delete migration chains from the refresh_tokens revision."""
+    cfg = Config()
+    cfg.set_main_option("script_location", SCRIPT_LOCATION)
+    script = ScriptDirectory.from_config(cfg)
+
+    head = script.get_current_head()
+    assert head == "a1b2c3d4e5f6"
+
+    rev = script.get_revision(head)
+    assert rev is not None
+    assert rev.down_revision == "45b786644a86"
+
+    with open(rev.path) as fh:
+        text = fh.read()
+    # Must migrate both tables
+    assert "'users'" in text
+    assert "'oauth__refresh_tokens'" in text
+    # Must add soft-delete columns
+    assert "deleted_at" in text
+    assert "deleted_by" in text
+    # Must use UUID type
+    assert "Uuid" in text
 
 
 def test_chain_upgrades_to_head_in_offline_mode():

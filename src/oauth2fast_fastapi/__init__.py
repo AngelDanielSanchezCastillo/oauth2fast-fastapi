@@ -13,7 +13,7 @@ from .database import (
     startup_database,
 )
 from .dependencies import get_auth_session, get_current_user, get_current_verified_user
-from .models.bases import AuthModel, BasicAuthModel
+from .models.bases import AuthModel, AuthSoftDeleteModel, BasicAuthModel
 from .models.refresh_token_model import RefreshToken
 from .models.user_model import User
 from .routers.admin_router import router as admin_router
@@ -28,6 +28,7 @@ from .utils.token_utils import (
 
 __all__ = [
     "AuthModel",
+    "AuthSoftDeleteModel",
     "BasicAuthModel",
     "RefreshToken",
     "User",

@@ -4,7 +4,7 @@ description: "Trigger: working on or with oauth2fast-fastapi. Stateless JWT auth
 license: MIT
 metadata:
   author: AngelDanielSanchezCastillo
-  version: "2.0"
+  version: "2.1"
 ---
 
 ## Purpose
@@ -12,6 +12,24 @@ metadata:
 OAuth2 **password grant** (`POST /token`), email verification and refresh
 tokens (rotation + family reuse detection). No social providers. Downstream
 base for tenants2fast/permissions2fast (`AuthModel`, `User`, deps, JWT utils).
+
+## Identity: UUID v7 + Soft Delete (0.8.0+)
+
+All models use **UUID v7** (time-ordered) primary keys instead of BigInteger:
+
+- `AuthModel` inherits from `UUIDIdMixin` → `id: UUID` with `default_factory=uuid7`
+- `AuthSoftDeleteModel` adds `SoftDeleteMixin` → `deleted_at: datetime | None`, `deleted_by: UUID | None`
+- `User` and `RefreshToken` inherit from `AuthSoftDeleteModel`
+
+**Soft-delete functions** (from `tools2fast_fastapi`):
+- `soft_delete(session, model_cls, id, deleted_by)` — Mark as deleted
+- `restore(session, model_cls, id, restored_by)` — Restore deleted record
+- `active_only(query)` — Filter: `WHERE deleted_at IS NULL`
+- `deleted_only(query)` — Filter: `WHERE deleted_at IS NOT NULL`
+
+**Migration**: Existing databases use `gen_random_uuid()` (UUIDv4) for backfill. New records use UUIDv7.
+
+**Impact**: All `id` fields in API responses are UUID strings. Foreign keys referencing `users.id` must be UUID type.
 
 ## Import quirk
 
@@ -30,7 +48,10 @@ base for tenants2fast/permissions2fast (`AuthModel`, `User`, deps, JWT utils).
 
 ## Architecture
 
-- `AuthModel` (id + created_at/updated_at from tools2fast mixins) uses a **shared custom `metadata`** (`oauth2fast_fastapi.models.bases.metadata`). Auth tables are created with `AuthModel.metadata.create_all`; downstream models extending `AuthModel` MUST stay on this metadata.
+- `IdAuthModel` (`UUIDIdMixin` + `BasicModel`) — UUID v7 primary key.
+- `AuthModel` (`TimestampMixin` + `IdAuthModel`) — UUID + timestamps.
+- `AuthSoftDeleteModel` (`SoftDeleteMixin` + `AuthModel`) — UUID + timestamps + soft-delete (deleted_at, deleted_by).
+- All use a **shared custom `metadata`** (`oauth2fast_fastapi.models.bases.metadata`). Auth tables are created with `AuthModel.metadata.create_all`; downstream models extending `AuthModel` MUST stay on this metadata.
 - Access token: `{"sub": <email>, "exp"}` — **`sub` is the EMAIL, not the id** (tenants2fast middleware depends on this).
 - Verification token: separate JWT with `"type": "email_verification"`, 24h expiry; access JWTs are rejected.
 - Custom user: subclass `User` with `table=True` + new `__tablename__`, but `get_current_user` queries the base `User` — override the dep for a fully custom model.

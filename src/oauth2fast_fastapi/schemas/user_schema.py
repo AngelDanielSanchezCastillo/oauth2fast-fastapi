@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel
 
-from tools2fast_fastapi import TimestampMixin
+from tools2fast_fastapi import TimestampMixin, UUIDIdMixin, SoftDeleteMixin
 
 
 class UserBase(SQLModel):
@@ -12,6 +12,5 @@ class UserCreate(UserBase):
     password: str
 
 
-class UserRead(UserBase, TimestampMixin):
-    id: int
+class UserRead(UserBase, UUIDIdMixin, TimestampMixin, SoftDeleteMixin):
     is_verified: bool
