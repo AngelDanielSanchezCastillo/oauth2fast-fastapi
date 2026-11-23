@@ -125,14 +125,13 @@ def test_uuid_soft_delete_revision_chains_from_refresh_tokens():
 
     with open(rev.path) as fh:
         text = fh.read()
-    # Must migrate both tables
+    # Must migrate both tables via the two-phase Alembic helpers
     assert "'users'" in text
     assert "'oauth__refresh_tokens'" in text
-    # Must add soft-delete columns
-    assert "deleted_at" in text
-    assert "deleted_by" in text
-    # Must use UUID type
-    assert "Uuid" in text
+    assert "add_soft_delete_columns_alembic" in text
+    assert "prepare_pk_uuid_alembic" in text
+    assert "prepare_fk_uuid_alembic" in text
+    assert "finalize_uuid_alembic" in text
 
 
 def test_chain_upgrades_to_head_in_offline_mode():
