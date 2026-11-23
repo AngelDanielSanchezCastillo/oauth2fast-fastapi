@@ -28,7 +28,7 @@ classifiers = [
 dependencies = [
     # External modules (include their own dependencies)
     # Databases: 0.6.0+ ships migration helpers for bigint→UUID conversion.
-    "pgsqlasync2fast-fastapi>=0.6.0",
+    "pgsqlasync2fast-fastapi>=0.6.2",
     # Alembic ships the shared migration runner/env/registry.
     "alembic>=1.20.0",
     # Mailing
