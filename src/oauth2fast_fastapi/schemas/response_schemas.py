@@ -5,6 +5,8 @@ These schemas provide unified API response format with success/error patterns.
 """
 
 from typing import Literal
+from uuid import UUID
+
 from pydantic import BaseModel
 
 from tools2fast_fastapi import ErrorDetail
@@ -54,12 +56,14 @@ class TokenUnexpectedErrorResponse(BaseModel):
 class UserResponse(BaseModel):
     """Response for user data."""
 
-    id: int
+    id: UUID
     email: str
     name: str
     is_verified: bool
     created_at: str | None = None
     updated_at: str | None = None
+    deleted_at: str | None = None
+    deleted_by: UUID | None = None
 
 
 class UserCreatedResponse(BaseModel):

@@ -371,6 +371,8 @@ async def create_auth_user(
                 is_verified=user.is_verified,
                 created_at=str(user.created_at) if user.created_at else None,
                 updated_at=str(user.updated_at) if user.updated_at else None,
+                deleted_at=str(user.deleted_at) if user.deleted_at else None,
+                deleted_by=user.deleted_by,
             )
         )
     except IntegrityError:

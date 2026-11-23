@@ -3,10 +3,10 @@ from uuid import UUID
 
 from sqlmodel import Field
 
-from .bases import AuthModel
+from .bases import AuthSoftDeleteModel
 
 
-class RefreshToken(AuthModel, table=True):
+class RefreshToken(AuthSoftDeleteModel, table=True):
     """Persisted refresh token (PostgreSQL is the source of truth).
 
     The raw token is never stored: only its SHA-256 hash. ``family_id`` groups
@@ -16,7 +16,7 @@ class RefreshToken(AuthModel, table=True):
 
     __tablename__ = "oauth__refresh_tokens"
 
-    user_id: int = Field(foreign_key="users.id", index=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
     token_hash: str = Field(index=True, unique=True, max_length=64)
     family_id: UUID = Field(index=True)
     device_info: str | None = Field(default=None, max_length=512)
