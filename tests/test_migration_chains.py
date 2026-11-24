@@ -132,6 +132,12 @@ def test_uuid_soft_delete_revision_chains_from_refresh_tokens():
     assert "prepare_pk_uuid_alembic" in text
     assert "prepare_fk_uuid_alembic" in text
     assert "finalize_uuid_alembic" in text
+    # Cross-chain coordination (ODD-3 Fase 1.5): persistent map + FK drop.
+    assert "_uuid_migration_user_map" in text
+    assert "CREATE TABLE IF NOT EXISTS" in text
+    assert "role_users" in text
+    assert "tenant_users" in text
+    assert "DROP CONSTRAINT" in text
 
 
 def test_chain_upgrades_to_head_in_offline_mode():
