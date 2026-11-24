@@ -2,6 +2,49 @@
 
 ---
 
+## Migration Guide: 0.8.1 → 0.8.2 (cross-package user-id map)
+
+### Why
+
+`role_users.user_id` (permissions2fast) and `tenant_users.user_id`
+(tenants2fast-auth) reference `users.id`. Dropping the `users` primary key
+during the UUID migration fails while those external FKs exist, and the sibling
+chains cannot backfill their columns because the old integer ids are gone.
+
+### What changed
+
+`0.8.2` coordinates the AUTH lane:
+
+1. Creates a persistent `_uuid_migration_user_map (old_id BIGINT, new_uuid
+   UUID)` table before migrating `users`.
+2. Fills it with the exact UUIDs generated for `users.id`.
+3. Drops the external FKs `role_users.user_id -> users.id` and
+   `tenant_users.user_id -> users.id` before the PK swap.
+4. Leaves the map for the sibling chains.
+
+`permissions2fast >= 0.12.2` and `tenants2fast >= 0.10.1` backfill
+`role_users.user_id`, `permission_assignments.entity_id` (`entity_type='User'`)
+and `tenant_users.user_id` from that map, recreate their FKs, and
+`tenants2fast-auth` drops the map as the last consumer.
+
+### Requirements
+
+- Upgrade the three chains together, in lane order: `oauth` → `permissions` →
+  `tenant2fast-auth`. Do not run them in isolation against a database with
+  data.
+- The map is not a `TEMP TABLE` (each chain runs in a different
+  process/connection). It is visible until the last consumer drops it; on a
+  failed run it is reused by the retry.
+
+### Notes
+
+- Databases migrated with `0.8.1` on an auth-only setup have no map. The
+  sibling migrations detect its absence and keep the previous "no backfill"
+  behavior.
+- New databases are unaffected: the backfills run against empty tables.
+
+---
+
 ## Migration Guide: 0.7.3 → 0.8.0 (UUID v7 + Soft Delete)
 
 ### Breaking Changes

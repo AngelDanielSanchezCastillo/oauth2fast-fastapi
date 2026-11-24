@@ -30,24 +30,62 @@ def upgrade() -> None:
 
     Also add soft-delete columns (deleted_at, deleted_by) to both tables.
 
+    Cross-chain coordination (ODD-3 Fase 1.5):
+    - ``role_users.user_id`` (permissions2fast) and ``tenant_users.user_id``
+      (tenants2fast-auth) reference ``users.id``. This migration drops those
+      external FKs before the PK swap (Postgres refuses otherwise) and leaves
+      a persistent ``_uuid_migration_user_map`` table so the sibling chains can
+      backfill their columns with the SAME UUIDs instead of losing the values.
+    - The map is dropped by ``tenants2fast-auth`` after it consumes it.
+
     Two-phase, FK-safe (pgsqlasync2fast 0.6.2 helpers):
     - prepare PKs/FKs while the old integer columns still exist, backfilling
       child rows by joining ``users.id_uuid`` on the old integer ``user_id``;
     - finalize: drop the child FK, swap PKs, swap FKs, recreate constraints.
-
-    Backfill uses gen_random_uuid() (UUIDv4) for existing rows; new rows use
-    UUIDv7 via UUIDIdMixin. Both are valid UUIDs for the PK.
     """
     # --- Soft-delete columns ---------------------------------------------
     add_soft_delete_columns_alembic(op, 'users')
     add_soft_delete_columns_alembic(op, 'oauth__refresh_tokens')
 
+    # --- Cross-chain user-id map (old int -> new UUID) --------------------
+    # Ephemeral by design: created here, consumed by permissions2fast and
+    # tenants2fast-auth, dropped by the latter. Not a TEMP TABLE because each
+    # chain runs in a different process/connection.
+    op.execute(
+        """
+        CREATE TABLE IF NOT EXISTS _uuid_migration_user_map (
+            old_id BIGINT PRIMARY KEY,
+            new_uuid UUID NOT NULL UNIQUE
+        )
+        """
+    )
+
     # --- Phase 1: prepare UUID columns (old integer columns kept) ---------
     prepare_pk_uuid_alembic(op, 'users')
+    op.execute(
+        """
+        INSERT INTO _uuid_migration_user_map (old_id, new_uuid)
+        SELECT id, id_uuid FROM users
+        ON CONFLICT (old_id) DO NOTHING
+        """
+    )
     prepare_pk_uuid_alembic(op, 'oauth__refresh_tokens')
     prepare_fk_uuid_alembic(
         op, 'oauth__refresh_tokens', 'user_id', 'users', nullable=False
     )
+
+    # --- Drop external FKs to users before the PK swap --------------------
+    # Only the known 2fast tables are touched; their chains recreate the FKs
+    # as UUID after backfilling from the map. Offline-safe (no bind needed).
+    for table_name in ("role_users", "tenant_users"):
+        for constraint_name in (
+            f"{table_name}_user_id_fkey",
+            f"fk_{table_name}_user_id",
+        ):
+            op.execute(
+                f'ALTER TABLE IF EXISTS "{table_name}" '
+                f'DROP CONSTRAINT IF EXISTS "{constraint_name}"'
+            )
 
     # --- Phase 2: finalize swap (FK-safe order) ---------------------------
     finalize_uuid_alembic(
